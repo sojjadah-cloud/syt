@@ -1,0 +1,33 @@
+# Render Blueprint: creates the PostgreSQL database and the web service and wires them together.
+# Dashboard → New → Blueprint → select this repository.
+databases:
+  - name: mtc-se-survey-db
+    databaseName: se_survey
+    user: se_survey
+    plan: free # NOTE: Render deletes free databases after 30 days — upgrade before collecting real responses.
+    region: frankfurt
+
+services:
+  - type: web
+    name: mtc-se-survey
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: frankfurt
+    branch: main
+    autoDeploy: true
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: mtc-se-survey-db
+          property: connectionString
+      - key: ADMIN_SESSION_SECRET
+        generateValue: true
+      - key: TRUST_PROXY
+        value: "true"
+      # Entered in the Render dashboard when the Blueprint is created (never committed):
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
