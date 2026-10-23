@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { isSameOrigin } from "@/lib/same-origin";
 import { createSubmission } from "@/lib/submissions";
 import { submissionSchema } from "@/lib/survey-schema";
 
@@ -15,8 +16,7 @@ export async function POST(req: NextRequest) {
   if (!contentType.includes("application/json")) return json({ error: "unsupported_media_type" }, 415);
 
   // Same-origin only.
-  const origin = req.headers.get("origin");
-  if (origin && origin !== req.nextUrl.origin) return json({ error: "forbidden" }, 403);
+  if (!isSameOrigin(req.headers)) return json({ error: "forbidden" }, 403);
 
   const limit = rateLimit(`submit:${clientIp(req.headers)}`, 10, 10 * 60 * 1000);
   if (!limit.ok) return json({ error: "rate_limited" }, 429, { "Retry-After": String(limit.retryAfter) });

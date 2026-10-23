@@ -4,6 +4,7 @@ import { z } from "zod";
 import { audit } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { isSameOrigin } from "@/lib/same-origin";
 import { SESSION_COOKIE, SESSION_MAX_AGE, signSession } from "@/lib/session";
 
 export const runtime = "nodejs";
@@ -13,8 +14,7 @@ const schema = z.object({ email: z.string().trim().toLowerCase().max(200), passw
 const DUMMY_HASH = bcrypt.hashSync("no-such-account-placeholder", 12);
 
 export async function POST(req: NextRequest) {
-  const origin = req.headers.get("origin");
-  if (origin && origin !== req.nextUrl.origin) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!isSameOrigin(req.headers)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const ip = clientIp(req.headers);
   const parsed = schema.safeParse(await req.json().catch(() => null));
