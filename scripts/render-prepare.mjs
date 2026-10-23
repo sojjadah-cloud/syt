@@ -1,5 +1,6 @@
-// Runs during `npm run build`. On Render (RENDER=true) it applies database migrations
-// and creates the first staff account; elsewhere it does nothing.
+// On Render (RENDER=true) applies database migrations and creates the first staff account;
+// elsewhere it does nothing. Runs during `npm run build` (Node runtime) and at container
+// start (Docker runtime, see Dockerfile). Safe to run repeatedly.
 import { execSync } from "node:child_process";
 
 if (process.env.RENDER !== "true") process.exit(0);

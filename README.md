@@ -61,10 +61,10 @@ There is deliberately **no public admin registration**. Accounts can only be cre
 
 1. **Database:** Render dashboard → **New → PostgreSQL**. Use the same region as the web service. Render databases are UTF-8.
    - The **free** database is **deleted after 30 days**. For real survey data, choose a paid database plan, or use an external free PostgreSQL such as Neon and paste its connection string instead.
-2. **Web service** (Node), connected to this repository, branch `main`:
-   - **Build Command:** `npm ci && npm run build`. On Render this also applies database migrations and creates the first staff account.
-   - **Start Command:** `npm start`
-   - **Health Check Path:** `/api/health`
+2. **Web service**, connected to this repository, branch `main`. Either runtime works:
+   - **Docker** (uses the included `Dockerfile`, no commands needed). Migrations and the first staff account run when the container starts.
+   - **Node:** Build Command `npm ci && npm run build`, Start Command `npm start`. Migrations and the first staff account run during the build.
+   - In both cases, set **Health Check Path** to `/api/health`.
 3. **Environment** variables on the web service:
 
    | Key | Value |
