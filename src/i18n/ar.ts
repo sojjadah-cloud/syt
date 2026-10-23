@@ -32,7 +32,6 @@ const ar: Dictionary = {
     review: "مراجعة الإجابات",
     submit: "إرسال الاستبيان",
     submitting: "جارٍ الإرسال…",
-    draftSaved: "يتم حفظ إجاباتك في جلسة المتصفح الحالية.",
   },
   sections: [
     {

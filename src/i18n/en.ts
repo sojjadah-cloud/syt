@@ -30,7 +30,6 @@ const en = {
     review: "Review Answers",
     submit: "Submit Survey",
     submitting: "Submitting…",
-    draftSaved: "Your answers are saved in this browser session.",
   },
   sections: [
     {

@@ -254,7 +254,6 @@ export function SurveyApp() {
                       isFinal={onReview}
                       busy={submitting}
                     />
-                    <p className="mt-4 text-center text-[12.5px] text-muted sm:text-end">{t.survey.draftSaved}</p>
                   </form>
               </Card>
             </div>
