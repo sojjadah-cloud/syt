@@ -223,10 +223,8 @@ export function SurveyApp() {
               </div>
 
               <Card ref={cardRef} className="scroll-mt-4 p-5 sm:p-7 lg:p-10">
-                {!hydrated ? (
-                  <div className="h-96" aria-busy />
-                ) : (
-                  <form noValidate onSubmit={(e) => e.preventDefault()}>
+                {/* Rendered on the server so the form is visible immediately; a saved draft is restored after load. */}
+                <form noValidate onSubmit={(e) => e.preventDefault()}>
                     <div className="mb-8">
                       <ProgressBar step={step} total={SECTION_COUNT} />
                     </div>
@@ -258,7 +256,6 @@ export function SurveyApp() {
                     />
                     <p className="mt-4 text-center text-[12.5px] text-muted sm:text-end">{t.survey.draftSaved}</p>
                   </form>
-                )}
               </Card>
             </div>
           )}

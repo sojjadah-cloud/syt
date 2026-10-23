@@ -57,6 +57,32 @@ There is deliberately **no public admin registration**. Accounts can only be cre
 
 ---
 
+## Deploy on Render
+
+1. **Database:** Render dashboard → **New → PostgreSQL**. Use the same region as the web service. Render databases are UTF-8.
+   - The **free** database is **deleted after 30 days**. For real survey data, choose a paid database plan, or use an external free PostgreSQL such as Neon and paste its connection string instead.
+2. **Web service** (Node), connected to this repository, branch `main`:
+   - **Build Command:** `npm ci && npm run build`. On Render this also applies database migrations and creates the first staff account.
+   - **Start Command:** `npm start`
+   - **Health Check Path:** `/api/health`
+3. **Environment** variables on the web service:
+
+   | Key | Value |
+   |---|---|
+   | `DATABASE_URL` | The database's **Internal Database URL** |
+   | `ADMIN_SESSION_SECRET` | Click **Generate** (any random value of 32+ characters) |
+   | `TRUST_PROXY` | `true` |
+   | `ADMIN_EMAIL` | Email of the first staff account |
+   | `ADMIN_PASSWORD` | Its password (12+ characters). Used only to create the account if it does not exist yet. |
+   | `ADMIN_NAME` | Optional display name |
+
+4. **Manual Deploy → Deploy latest commit.** The survey is at `/` and the staff dashboard at `/admin`.
+
+**First-load delay.** Free Render instances spin down after 15 minutes without traffic, and the next visit then waits about 50 seconds.
+- The workflow `.github/workflows/keep-alive.yml` pings `/api/health` every 10 minutes so the service stays awake. One always-on service fits within the free 750 instance-hours per month.
+- If the service URL changes, set the repository variable `APP_URL` (Settings → Secrets and variables → Actions → Variables).
+- GitHub may delay scheduled runs and pauses them after 60 days without repository activity. For a guaranteed instant load, use Render's **Starter** instance, which never sleeps, or add an external uptime monitor that hits `/api/health` every 5 minutes.
+
 ## Production deployment
 
 1. **Provision PostgreSQL** (version 14 or later) and create a database plus a dedicated user that owns it. The database **must be UTF-8**, or Arabic answers cannot be saved:

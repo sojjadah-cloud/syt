@@ -1,0 +1,18 @@
+# Pings the Render service every 10 minutes so the free instance does not spin down
+# (Render sleeps free services after 15 minutes without traffic, causing ~50 s first loads).
+# Set the repository variable APP_URL if the service URL changes.
+name: Keep Render awake
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        env:
+          APP_URL: ${{ vars.APP_URL || 'https://syt-lf7d.onrender.com' }}
+        run: curl -fsS --retry 3 --retry-delay 10 --max-time 90 "$APP_URL/api/health"

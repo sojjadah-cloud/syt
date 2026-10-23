@@ -5,8 +5,8 @@
   "description": "Systems Engineering Department (MTC) - Student Talent, Skills & Scientific Engagement Survey",
   "scripts": {
     "dev": "next dev -p 3000",
-    "build": "prisma generate && next build",
-    "start": "next start -p 3000",
+    "build": "prisma generate && node scripts/render-prepare.mjs && next build",
+    "start": "next start",
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -43,5 +43,8 @@
     "tsx": "4.20.5",
     "typescript": "5.9.3",
     "vitest": "3.2.4"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }
