@@ -22,8 +22,10 @@ execSync("npx prisma migrate deploy", { stdio: "inherit" });
 
 const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
 const password = process.env.ADMIN_PASSWORD;
-if (email && password) {
-  if (password.length < 12) fail("ADMIN_PASSWORD must be at least 12 characters.");
+if (email && password && password.length < 12) {
+  // Do not take the survey offline over this; just skip creating the account.
+  console.warn("[render-prepare] WARNING: ADMIN_PASSWORD is shorter than 12 characters — staff account NOT created. Set a longer ADMIN_PASSWORD in Environment and redeploy.");
+} else if (email && password) {
   const { PrismaClient } = await import("@prisma/client");
   const bcrypt = (await import("bcryptjs")).default;
   const prisma = new PrismaClient();
