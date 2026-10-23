@@ -1,0 +1,47 @@
+{
+  "name": "mtc-se-student-survey",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Systems Engineering Department (MTC) - Student Talent, Skills & Scientific Engagement Survey",
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "prisma generate && next build",
+    "start": "next start -p 3000",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "db:local": "node scripts/dev-db.mjs",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "admin:create": "tsx scripts/create-admin.ts",
+    "postinstall": "prisma generate"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "5.2.2",
+    "@prisma/client": "6.19.3",
+    "bcryptjs": "3.0.3",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "exceljs": "4.4.0",
+    "jose": "6.1.3",
+    "next": "15.5.28",
+    "react": "19.1.10",
+    "react-dom": "19.1.10",
+    "react-hook-form": "7.62.0",
+    "server-only": "^0.0.1",
+    "tailwind-merge": "3.3.1",
+    "zod": "4.1.12"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.1.18",
+    "@types/node": "22.18.0",
+    "@types/react": "19.1.13",
+    "@types/react-dom": "19.1.9",
+    "embedded-postgres": "17.7.0-beta.16",
+    "prisma": "6.19.3",
+    "tailwindcss": "4.1.18",
+    "tsx": "4.20.5",
+    "typescript": "5.9.3",
+    "vitest": "3.2.4"
+  }
+}

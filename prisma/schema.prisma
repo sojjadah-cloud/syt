@@ -1,0 +1,217 @@
+// Systems Engineering Department — Student Talent, Skills & Scientific Engagement Survey
+// Option enums below must stay in sync with src/config/survey.ts.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AcademicLevel {
+  LEVEL_3
+  LEVEL_4
+  LEVEL_5
+  LEVEL_6
+}
+
+// Q4 follow-up for Information Systems Engineering (ISE)
+enum IseTrack {
+  CYBERSECURITY
+  AI
+  IT
+  OTHER
+}
+
+// Q5
+enum InterestActivity {
+  COMPETITIONS
+  INNOVATION_PROJECTS
+  RESEARCH
+  HACKATHONS
+  CONFERENCES
+  WORKSHOPS
+}
+
+// Q6
+enum TechnicalField {
+  AI_ML
+  CYBERSECURITY
+  SOFTWARE
+  ROBOTICS
+  EMBEDDED_IOT
+  NETWORKING
+  ELECTRONICS
+  DATA_SCIENCE
+  SPACE
+  DESIGN_3D
+  OTHER
+}
+
+// Q8
+enum ExperienceType {
+  COMPETITIONS
+  EXTRA_PROJECTS
+  RESEARCH
+  HACKATHONS
+  EXHIBITIONS
+  NONE
+}
+
+// Q11
+enum Readiness {
+  VERY_READY
+  SCHEDULE_DEPENDENT
+  NEEDS_TRAINING
+  UNSURE
+  NOT_READY
+}
+
+// Q12
+enum WeeklyHours {
+  LT_2
+  H2_4
+  H5_7
+  GT_7
+}
+
+// Q13
+enum TeamRole {
+  PROGRAMMING
+  DESIGN_PROTOTYPING
+  RESEARCH_ANALYSIS
+  PLANNING_MANAGEMENT
+  LEADERSHIP
+  REPORTS_PRESENTATIONS
+  FLEXIBLE
+}
+
+// Q14
+enum Barrier {
+  WORKLOAD
+  LIMITED_SKILLS
+  LACK_GUIDANCE
+  FINDING_TEAM
+  AWARENESS
+  RESOURCES
+  NONE
+}
+
+// Q15
+enum SupportType {
+  WORKSHOPS
+  MENTORSHIP
+  LABS_EQUIPMENT
+  COMPETITION_ANNOUNCEMENTS
+  TEAM_FORMING
+  RESEARCH_SUPPORT
+  EXTERNAL_EVENTS
+}
+
+model Submission {
+  id               String        @id @default(cuid())
+  referenceNo      String        @unique
+  idempotencyKey   String        @unique
+  // Q1–Q4
+  fullName         String
+  studentId        String        @unique
+  academicLevel    AcademicLevel
+  specialisation   String
+  iseTrack         IseTrack?
+  iseTrackOther    String?
+  // Q9–Q10
+  skillsAndTools   String
+  achievements     String?
+  // Q11–Q13
+  readiness        Readiness
+  weeklyHours      WeeklyHours
+  teamRole         TeamRole
+  locale           String        @default("en")
+  consentAt        DateTime
+  createdAt        DateTime      @default(now())
+
+  interests   SubmissionInterest[]
+  fields      SubmissionField[]
+  experiences SubmissionExperience[]
+  barriers    SubmissionBarrier[]
+  supports    SubmissionSupport[]
+
+  @@index([academicLevel])
+  @@index([specialisation])
+  @@index([readiness])
+  @@index([weeklyHours])
+  @@index([teamRole])
+  @@index([createdAt])
+}
+
+model SubmissionInterest {
+  submissionId String
+  activity     InterestActivity
+  submission   Submission       @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@id([submissionId, activity])
+  @@index([activity])
+}
+
+// Q6 field selection + Q7 self-reported proficiency (1 = Beginner … 5 = Proficient)
+model SubmissionField {
+  submissionId String
+  field        TechnicalField
+  otherText    String?
+  proficiency  Int
+  submission   Submission     @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@id([submissionId, field])
+  @@index([field, proficiency])
+}
+
+model SubmissionExperience {
+  submissionId String
+  experience   ExperienceType
+  submission   Submission     @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@id([submissionId, experience])
+  @@index([experience])
+}
+
+model SubmissionBarrier {
+  submissionId String
+  barrier      Barrier
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@id([submissionId, barrier])
+  @@index([barrier])
+}
+
+model SubmissionSupport {
+  submissionId String
+  support      SupportType
+  submission   Submission  @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@id([submissionId, support])
+  @@index([support])
+}
+
+model AdminUser {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  name         String
+  passwordHash String
+  active       Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  lastLoginAt  DateTime?
+  auditLogs    AuditLog[]
+}
+
+model AuditLog {
+  id        String    @id @default(cuid())
+  adminId   String?
+  admin     AdminUser? @relation(fields: [adminId], references: [id], onDelete: SetNull)
+  action    String
+  detail    String?
+  createdAt DateTime  @default(now())
+
+  @@index([createdAt])
+}
