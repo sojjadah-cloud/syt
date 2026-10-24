@@ -8,6 +8,41 @@ A bilingual (English / Arabic) step-by-step survey with 15 questions in 5 sectio
 
 ---
 
+## Staff Scientific Engagement System
+
+Staff fill in **open forms**, like the student survey. No account or password is needed.
+
+| Route | Purpose |
+|---|---|
+| `/staff` | Choose a form, in English or Arabic |
+| `/staff/pathway` | Pathway Leaders: pathway, competencies, external opportunities (one record each), student preparation, recommendations |
+| `/staff/module` | TNA Module Coordinators: one module per form. Learning outcomes, proposed activities linked explicitly to outcomes, assessment, resources, competition potential |
+| `/staff/contribution` | Academic & technical staff: expertise, workshops, project/research ideas, mentoring, delivery preferences, availability |
+
+- **Same details across forms:** every form starts with *Your details* (name, official email, position, department, pathway). The browser remembers them for the next form. The server links all contributions with the same email to one staff profile.
+- **Drafts:** unsent answers are kept on the staff member's own device until submitted.
+- **Validation:** answers are checked step by step in the browser and again on the server. Submissions are rate-limited per IP and only accepted from this site.
+- **Identity is not verified:** the email is self-declared. If verified identity is required, put the `/staff` routes behind the college's single sign-on or a shared access code.
+
+### Admin (`/admin`, administrators only)
+
+The side menu is grouped as follows:
+- **Overview:** key numbers, items waiting for review, initiatives in progress, links to share.
+- **Students:** Student analytics (charts) and the student database.
+- **Staff contributions:**
+  - Staff directory (filters: technical field, contribution type, delivery, level, availability, workshop topic, research field)
+  - Opportunities (filters: pathway, type, level, country, expected date, priority, review status)
+  - Pathway report
+  - Modules
+  - Workshops
+  - Research ideas
+- **Planning:** Scientific planning. Turn a reviewed opportunity, workshop, project idea or module activity into an initiative, assign staff and students, record status changes (with history), track milestones and outcomes.
+- **Settings:** Administrator accounts and password change.
+
+**Matching** (on each opportunity and initiative) is rule-based and explained on screen. It uses students' self-reported survey answers: interest overlap, self-rated proficiency, readiness, weekly hours and previous participation, restricted to the target levels. It also lists staff with related expertise or mentoring interest, and the training gaps with related proposed workshops. Suggestions are never applied automatically. Administrators add students or staff to an initiative explicitly, and eligibility remains a staff decision.
+
+**Reports:** CSV and Excel exports for opportunities, pathways, modules (one row per activity, with linked outcomes), workshops, research ideas, the staff directory, initiatives, and an integrated planning report per technical field. Exports follow the page filters and the interface language. They are admin-only and recorded in the audit log.
+
 ## Before going live — required configuration
 
 | Item | Where | Notes |

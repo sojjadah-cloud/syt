@@ -1,7 +1,7 @@
 // Staff dashboard strings. Answer-option labels come from the survey dictionaries (en.ts / ar.ts).
 
 const en = {
-  brandTag: "Staff",
+  brandTag: "Admin",
   nav: { overview: "Dashboard", students: "Student database", label: "Admin navigation" },
   signOut: "Sign out",
   login: {
@@ -152,7 +152,7 @@ type Widen<T> = T extends string ? string : { [K in keyof T]: Widen<T[K]> };
 export type AdminDictionary = Widen<typeof en>;
 
 const ar: AdminDictionary = {
-  brandTag: "الموظفون",
+  brandTag: "الإدارة",
   nav: { overview: "لوحة المعلومات", students: "قاعدة بيانات الطلبة", label: "تنقل لوحة الإدارة" },
   signOut: "تسجيل الخروج",
   login: {

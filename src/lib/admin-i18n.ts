@@ -2,6 +2,8 @@ import "server-only";
 import { cookies } from "next/headers";
 import { SPECIALISATIONS, type IseTrack, type TechnicalField } from "@/config/survey";
 import { ADMIN_DICTS, ADMIN_LOCALE_COOKIE } from "@/i18n/admin";
+import { ENGAGEMENT_DICTS } from "@/i18n/engagement";
+import { STAFF_DICTS } from "@/i18n/staff";
 import ar from "@/i18n/ar";
 import en from "@/i18n/en";
 import { format } from "@/i18n/format";
@@ -15,6 +17,10 @@ function build(locale: AdminLocale) {
     locale,
     dir: (locale === "ar" ? "rtl" : "ltr") as "rtl" | "ltr",
     t: ADMIN_DICTS[locale],
+    /** Scientific engagement pages. */
+    e: ENGAGEMENT_DICTS[locale],
+    /** Staff survey questions and option labels. */
+    s: STAFF_DICTS[locale],
     o,
     format,
     spec: (v: string) => {

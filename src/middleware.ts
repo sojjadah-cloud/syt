@@ -1,10 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, verifySession } from "@/lib/session";
 
-// First line of defence; every admin page and API also re-checks on the server (lib/auth.ts).
+const PUBLIC = new Set(["/admin/login", "/api/admin/login"]);
+
+// First line of defence (signed session present). Every page and API also re-checks
+// the account and its roles on the server (lib/auth.ts).
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  if (pathname === "/admin/login" || pathname === "/api/admin/login") return NextResponse.next();
+  if (PUBLIC.has(pathname)) return NextResponse.next();
 
   const ok = await verifySession(req.cookies.get(SESSION_COOKIE)?.value);
   if (ok) return NextResponse.next();
@@ -13,4 +16,6 @@ export async function middleware(req: NextRequest) {
   return NextResponse.redirect(new URL("/admin/login", req.url));
 }
 
-export const config = { matcher: ["/admin/:path*", "/api/admin/:path*"] };
+export const config = {
+  matcher: ["/admin/:path*", "/api/admin/:path*", "/account/:path*", "/api/account/:path*"],
+};

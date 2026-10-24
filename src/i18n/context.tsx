@@ -53,6 +53,11 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
 
+/** Returns null outside an I18nProvider (used by components shared with staff forms). */
+export function useOptionalI18n() {
+  return useContext(I18nContext);
+}
+
 export function useI18n() {
   const ctx = useContext(I18nContext);
   if (!ctx) throw new Error("useI18n must be used inside I18nProvider");

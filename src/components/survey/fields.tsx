@@ -1,19 +1,52 @@
 "use client";
 
-import { useId } from "react";
-import { Controller, get, useFormContext, useFormState, type FieldPath } from "react-hook-form";
+import { createContext, useContext, useId, useState } from "react";
+import { Controller, get, useFormContext, useFormState } from "react-hook-form";
 import { Input, NativeSelect, Textarea } from "@/components/ui/input";
-import { useI18n } from "@/i18n/context";
-import type { ErrorKey, SurveyValues } from "@/lib/survey-schema";
+import { useOptionalI18n } from "@/i18n/context";
+import { format } from "@/i18n/format";
 import { cn } from "@/lib/utils";
 
-type Name = FieldPath<SurveyValues>;
+// ---------------------------------------------------------------------------
+// Form text: labels and validation messages for whichever form is rendering.
+// The student survey uses its I18nProvider; staff surveys provide their own.
+// ---------------------------------------------------------------------------
 
-export function useFieldError(name: Name) {
-  const { t } = useI18n();
-  const { errors } = useFormState<SurveyValues>({ name });
+export interface FormText {
+  required: string;
+  optional: string;
+  selectPlaceholder: string;
+  maxSelect: string;
+  selectAll: string;
+  search: string;
+  errors: Record<string, string>;
+}
+
+const FormTextContext = createContext<FormText | null>(null);
+export const FormTextProvider = FormTextContext.Provider;
+
+export function useFormText(): FormText {
+  const ctx = useContext(FormTextContext);
+  const i18n = useOptionalI18n();
+  if (ctx) return ctx;
+  if (!i18n) throw new Error("Form fields need FormTextProvider or I18nProvider");
+  const s = i18n.t.survey;
+  return {
+    required: s.required,
+    optional: s.optional,
+    selectPlaceholder: s.selectPlaceholder,
+    maxSelect: s.maxSelect,
+    selectAll: s.selectAll,
+    search: "",
+    errors: i18n.t.errors,
+  };
+}
+
+export function useFieldError(name: string) {
+  const text = useFormText();
+  const { errors } = useFormState({ name });
   const key = get(errors, name)?.message as string | undefined;
-  return key ? (t.errors[key as ErrorKey] ?? key) : undefined;
+  return key ? (text.errors[key] ?? key) : undefined;
 }
 
 export function ErrorText({ id, message }: { id: string; message?: string }) {
@@ -30,19 +63,20 @@ export function ErrorText({ id, message }: { id: string; message?: string }) {
 
 interface ShellProps {
   /** Omitted for follow-up sub-questions. */
-  number?: number;
+  number?: number | string;
   label: string;
   required?: boolean;
   hint?: string;
   error?: string;
   ids: { control: string; hint: string; error: string };
   group?: boolean;
+  compact?: boolean;
   children: React.ReactNode;
 }
 
 /** Shared question chrome: numbered label, required marker, hint and validation message. */
-export function FieldShell({ number, label, required, hint, error, ids, group, children }: ShellProps) {
-  const { t } = useI18n();
+export function FieldShell({ number, label, required, hint, error, ids, group, compact, children }: ShellProps) {
+  const text = useFormText();
   const labelContent = (
     <>
       {number !== undefined && <span className="me-1.5 text-muted tabular-nums">{number}.</span>}
@@ -52,12 +86,14 @@ export function FieldShell({ number, label, required, hint, error, ids, group, c
           *
         </span>
       ) : (
-        <span className="ms-2 text-[13px] font-normal text-muted">({t.survey.optional})</span>
+        <span className="ms-2 text-[13px] font-normal text-muted">({text.optional})</span>
       )}
-      {required && <span className="sr-only"> ({t.survey.required})</span>}
+      {required && <span className="sr-only"> ({text.required})</span>}
     </>
   );
-  const labelClass = "block text-[15px] font-medium leading-snug text-ink md:text-base";
+  const labelClass = compact
+    ? "block text-[14px] font-medium leading-snug text-ink"
+    : "block text-[15px] font-medium leading-snug text-ink md:text-base";
   const hintEl = hint && (
     <p id={ids.hint} className="mt-1 text-[13px] leading-relaxed text-muted">
       {hint}
@@ -69,7 +105,7 @@ export function FieldShell({ number, label, required, hint, error, ids, group, c
       <fieldset data-invalid={!!error || undefined} aria-describedby={cn(hint && ids.hint, error && ids.error) || undefined}>
         <legend className={labelClass}>{labelContent}</legend>
         {hintEl}
-        <div className="mt-3">{children}</div>
+        <div className={compact ? "mt-2" : "mt-3"}>{children}</div>
         <ErrorText id={ids.error} message={error} />
       </fieldset>
     );
@@ -80,7 +116,7 @@ export function FieldShell({ number, label, required, hint, error, ids, group, c
         {labelContent}
       </label>
       {hintEl}
-      <div className="mt-2.5">{children}</div>
+      <div className={compact ? "mt-1.5" : "mt-2.5"}>{children}</div>
       <ErrorText id={ids.error} message={error} />
     </div>
   );
@@ -92,11 +128,12 @@ function useIds() {
 }
 
 interface BaseProps {
-  name: Name;
-  number?: number;
+  name: string;
+  number?: number | string;
   label: string;
   hint?: string;
   required?: boolean;
+  compact?: boolean;
 }
 
 export function TextField({
@@ -105,13 +142,24 @@ export function TextField({
   label,
   hint,
   required = true,
+  compact,
   placeholder,
   maxLength,
   autoComplete,
   dir,
   multiline,
-}: BaseProps & { placeholder?: string; maxLength?: number; autoComplete?: string; dir?: "ltr" | "auto"; multiline?: boolean }) {
-  const { register } = useFormContext<SurveyValues>();
+  rows = 4,
+  type = "text",
+}: BaseProps & {
+  placeholder?: string;
+  maxLength?: number;
+  autoComplete?: string;
+  dir?: "ltr" | "auto";
+  multiline?: boolean;
+  rows?: number;
+  type?: "text" | "number" | "date" | "url" | "email";
+}) {
+  const { register } = useFormContext();
   const error = useFieldError(name);
   const ids = useIds();
   const common = {
@@ -125,19 +173,31 @@ export function TextField({
     ...register(name),
   };
   return (
-    <FieldShell number={number} label={label} hint={hint} required={required} error={error} ids={ids}>
-      {multiline ? <Textarea rows={4} {...common} /> : <Input autoComplete={autoComplete} {...common} />}
+    <FieldShell number={number} label={label} hint={hint} required={required} error={error} ids={ids} compact={compact}>
+      {multiline ? (
+        <Textarea rows={rows} className={rows < 4 ? "min-h-20" : undefined} {...common} />
+      ) : (
+        <Input autoComplete={autoComplete} type={type} inputMode={type === "number" ? "numeric" : undefined} min={type === "number" ? 0 : undefined} {...common} />
+      )}
     </FieldShell>
   );
 }
 
-export function SelectField({ name, number, label, hint, required = true, options }: BaseProps & { options: { value: string; label: string }[] }) {
-  const { register } = useFormContext<SurveyValues>();
-  const { t } = useI18n();
+export function SelectField({
+  name,
+  number,
+  label,
+  hint,
+  required = true,
+  compact,
+  options,
+}: BaseProps & { options: { value: string; label: string }[] }) {
+  const { register } = useFormContext();
+  const text = useFormText();
   const error = useFieldError(name);
   const ids = useIds();
   return (
-    <FieldShell number={number} label={label} hint={hint} required={required} error={error} ids={ids}>
+    <FieldShell number={number} label={label} hint={hint} required={required} error={error} ids={ids} compact={compact}>
       <NativeSelect
         id={ids.control}
         aria-invalid={!!error}
@@ -145,8 +205,8 @@ export function SelectField({ name, number, label, hint, required = true, option
         aria-describedby={cn(hint && ids.hint, error && ids.error) || undefined}
         {...register(name)}
       >
-        <option value="" disabled>
-          {t.survey.selectPlaceholder}
+        <option value="" disabled={required}>
+          {text.selectPlaceholder}
         </option>
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -187,7 +247,9 @@ interface ChoiceProps extends BaseProps {
   max?: number;
   /** Option that clears, and is cleared by, every other option (multiple only). */
   exclusive?: string;
-  columns?: 1 | 2;
+  columns?: 1 | 2 | 3;
+  /** Shows a filter box above the options. */
+  searchable?: boolean;
   /** Called after a multiple selection changes. */
   onChangeValues?: (values: string[]) => void;
 }
@@ -199,19 +261,23 @@ export function ChoiceField({
   label,
   hint,
   required = true,
+  compact,
   options,
   multiple,
   max,
   exclusive,
   columns = 2,
+  searchable,
   onChangeValues,
 }: ChoiceProps) {
-  const { control, getValues } = useFormContext<SurveyValues>();
-  const { t, format } = useI18n();
+  const { control, getValues } = useFormContext();
+  const text = useFormText();
   const error = useFieldError(name);
   const ids = useIds();
+  const [query, setQuery] = useState("");
   const type = multiple ? "checkbox" : "radio";
-  const helper = multiple ? (max ? format(t.survey.maxSelect, { max }) : t.survey.selectAll) : undefined;
+  const helper = multiple ? (max ? format(text.maxSelect, { max }) : text.selectAll) : undefined;
+  const q = query.trim().toLowerCase();
 
   return (
     <FieldShell
@@ -222,65 +288,81 @@ export function ChoiceField({
       required={required}
       error={error}
       ids={ids}
+      compact={compact}
     >
       <Controller
         control={control}
         name={name}
         render={({ field }) => {
-          const selected: string[] = multiple ? ((field.value as string[]) ?? []) : field.value ? [field.value as string] : [];
+          const selected: string[] = multiple ? (Array.isArray(field.value) ? field.value : []) : field.value ? [field.value as string] : [];
           const atMax = !!max && selected.length >= max;
 
           const toggle = (value: string) => {
             if (!multiple) return field.onChange(value);
             const current = getValues(name); // live value, not the render snapshot
-            const selected: string[] = Array.isArray(current) ? current : [];
+            const live: string[] = Array.isArray(current) ? current : [];
             let next: string[];
-            if (selected.includes(value)) next = selected.filter((v) => v !== value);
+            if (live.includes(value)) next = live.filter((v) => v !== value);
             else if (exclusive && value === exclusive) next = [value];
-            else next = [...selected.filter((v) => v !== exclusive), value];
+            else next = [...live.filter((v) => v !== exclusive), value];
             if (max && next.length > max) return;
             field.onChange(next);
             onChangeValues?.(next);
           };
 
+          const visible = q ? options.filter((o) => o.label.toLowerCase().includes(q) || selected.includes(o.value)) : options;
+
           return (
-            <div
-              role={multiple ? "group" : "radiogroup"}
-              aria-required={required}
-              aria-invalid={!!error}
-              className={cn("grid gap-2.5", columns === 2 && "sm:grid-cols-2")}
-            >
-              {options.map((o, i) => {
-                const checked = selected.includes(o.value);
-                const disabled = multiple && atMax && !checked;
-                return (
-                  <label
-                    key={o.value}
-                    className={cn(
-                      "flex items-start gap-3 rounded-xl border px-4 py-3 text-[14.5px] leading-snug transition-colors",
-                      "has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-brand/15",
-                      checked ? "border-brand bg-brand-soft/50 text-ink" : "border-line bg-white text-ink",
-                      disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:border-gray-300",
-                      exclusive === o.value && options.length > 2 && columns === 2 && "sm:col-span-2",
-                    )}
-                  >
-                    <input
-                      type={type}
-                      className="sr-only"
-                      name={field.name}
-                      value={o.value}
-                      checked={checked}
-                      disabled={disabled}
-                      onChange={() => toggle(o.value)}
-                      onBlur={field.onBlur}
-                      ref={i === 0 ? field.ref : undefined}
-                    />
-                    <Indicator type={type} checked={checked} />
-                    <span>{o.label}</span>
-                  </label>
-                );
-              })}
-            </div>
+            <>
+              {searchable && (
+                <Input
+                  type="search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder={text.search}
+                  aria-label={text.search}
+                  className="mb-2.5 h-10"
+                />
+              )}
+              <div
+                role={multiple ? "group" : "radiogroup"}
+                aria-required={required}
+                aria-invalid={!!error}
+                className={cn("grid", compact ? "gap-2" : "gap-2.5", columns >= 2 && "sm:grid-cols-2", columns === 3 && "lg:grid-cols-3")}
+              >
+                {visible.map((o, i) => {
+                  const checked = selected.includes(o.value);
+                  const disabled = multiple && atMax && !checked;
+                  return (
+                    <label
+                      key={o.value}
+                      className={cn(
+                        "flex items-start gap-3 rounded-xl border leading-snug transition-colors",
+                        compact ? "px-3 py-2.5 text-[14px]" : "px-4 py-3 text-[14.5px]",
+                        "has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-brand/15",
+                        checked ? "border-brand bg-brand-soft/50 text-ink" : "border-line bg-white text-ink",
+                        disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:border-gray-300",
+                        exclusive === o.value && options.length > 2 && columns === 2 && "sm:col-span-2",
+                      )}
+                    >
+                      <input
+                        type={type}
+                        className="sr-only"
+                        name={field.name}
+                        value={o.value}
+                        checked={checked}
+                        disabled={disabled}
+                        onChange={() => toggle(o.value)}
+                        onBlur={field.onBlur}
+                        ref={i === 0 ? field.ref : undefined}
+                      />
+                      <Indicator type={type} checked={checked} />
+                      <span>{o.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </>
           );
         }}
       />

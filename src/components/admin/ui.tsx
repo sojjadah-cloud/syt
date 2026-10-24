@@ -4,6 +4,79 @@ import type { AdminI18n } from "@/lib/admin-i18n";
 import { cn } from "@/lib/utils";
 import { AdminLanguageSwitcher } from "./AdminLanguageSwitcher";
 
+export type AdminTab =
+  | "overview"
+  | "analytics"
+  | "students"
+  | "staff"
+  | "opportunities"
+  | "pathways"
+  | "modules"
+  | "workshops"
+  | "research"
+  | "planning"
+  | "accounts"
+  | "password";
+
+/** Grouped side menu: Overview · Students · Staff contributions · Planning · Settings. */
+function AdminNav({ i18n, active }: { i18n: AdminI18n; active: AdminTab }) {
+  const { t, e } = i18n;
+  const groups: { label?: string; items: [string, string, AdminTab][] }[] = [
+    { items: [["/admin", e.home.title, "overview"]] },
+    {
+      label: e.nav.groups.students,
+      items: [
+        ["/admin/analytics", e.nav.analytics, "analytics"],
+        ["/admin/students", t.nav.students, "students"],
+      ],
+    },
+    {
+      label: e.nav.groups.staff,
+      items: [
+        ["/admin/staff", e.nav.staff, "staff"],
+        ["/admin/opportunities", e.nav.opportunities, "opportunities"],
+        ["/admin/pathways", e.nav.pathways, "pathways"],
+        ["/admin/modules", e.nav.modules, "modules"],
+        ["/admin/workshops", e.nav.workshops, "workshops"],
+        ["/admin/research", e.nav.research, "research"],
+      ],
+    },
+    { label: e.nav.groups.planning, items: [["/admin/scientific-planning", e.nav.planning, "planning"]] },
+    {
+      label: e.nav.groups.settings,
+      items: [
+        ["/admin/staff/accounts", e.nav.accounts, "accounts"],
+        ["/account/password", e.nav.password, "password"],
+      ],
+    },
+  ];
+  return (
+    <nav aria-label={t.nav.label} className="space-y-5">
+      {groups.map((g, i) => (
+        <div key={i}>
+          {g.label && <p className="mb-1.5 px-3 text-[11.5px] font-semibold uppercase tracking-wide text-muted">{g.label}</p>}
+          <ul className="space-y-0.5">
+            {g.items.map(([href, label, key]) => (
+              <li key={href}>
+                <Link
+                  href={href}
+                  aria-current={active === key ? "page" : undefined}
+                  className={cn(
+                    "block rounded-lg px-3 py-2 text-[14px] transition-colors",
+                    active === key ? "bg-brand-soft font-semibold text-brand-deep" : "text-ink hover:bg-white",
+                  )}
+                >
+                  {label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </nav>
+  );
+}
+
 export function AdminShell({
   i18n,
   adminName,
@@ -12,22 +85,10 @@ export function AdminShell({
 }: {
   i18n: AdminI18n;
   adminName?: string;
-  active?: "overview" | "students";
+  active?: AdminTab;
   children: React.ReactNode;
 }) {
-  const { t, locale, dir } = i18n;
-  const tab = (href: string, label: string, on: boolean) => (
-    <Link
-      href={href}
-      aria-current={on ? "page" : undefined}
-      className={cn(
-        "-mb-px border-b-2 px-1 py-3 text-[14px] font-medium transition-colors",
-        on ? "border-brand text-ink" : "border-transparent text-muted hover:text-ink",
-      )}
-    >
-      {label}
-    </Link>
-  );
+  const { t, e, locale, dir } = i18n;
   return (
     <div dir={dir} lang={locale} className="min-h-dvh">
       <HeaderFrame
@@ -52,15 +113,29 @@ export function AdminShell({
           </span>
         </div>
       </HeaderFrame>
-      {active && (
-        <div className="border-b border-line bg-white">
-          <nav className="mx-auto flex max-w-7xl gap-6 px-4 md:px-6 lg:px-8" aria-label={t.nav.label}>
-            {tab("/admin", t.nav.overview, active === "overview")}
-            {tab("/admin/students", t.nav.students, active === "students")}
-          </nav>
+      {active ? (
+        <div className="mx-auto max-w-[1440px] px-4 md:px-6 lg:grid lg:grid-cols-[230px_minmax(0,1fr)] lg:gap-8 lg:px-8">
+          <aside className="hidden lg:block">
+            <div className="sticky top-0 max-h-dvh overflow-y-auto py-8">
+              <AdminNav i18n={i18n} active={active} />
+            </div>
+          </aside>
+          <details className="group mt-4 rounded-xl border border-line bg-white lg:hidden">
+            <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-[14px] font-medium [&::-webkit-details-marker]:hidden">
+              {e.nav.menu}
+              <svg viewBox="0 0 20 20" className="h-4 w-4 text-muted transition-transform group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                <path d="m5 8 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </summary>
+            <div className="border-t border-line p-3">
+              <AdminNav i18n={i18n} active={active} />
+            </div>
+          </details>
+          <main className="min-w-0 pb-16 pt-6 lg:pt-8">{children}</main>
         </div>
+      ) : (
+        <main className="mx-auto max-w-7xl px-4 pb-16 pt-6 md:px-6 lg:px-8 lg:pt-8">{children}</main>
       )}
-      <main className="mx-auto max-w-7xl px-4 pb-16 pt-6 md:px-6 lg:px-8 lg:pt-8">{children}</main>
     </div>
   );
 }

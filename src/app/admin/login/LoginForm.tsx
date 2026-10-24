@@ -21,11 +21,11 @@ export function LoginForm({ t }: { t: AdminDictionary["login"] }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: fd.get("email"), password: fd.get("password") }),
       });
+      const data = (await res.json().catch(() => ({}))) as { error?: string; roles?: string[]; mustChangePassword?: boolean };
       if (res.ok) {
-        window.location.assign("/admin");
+        window.location.assign(data.mustChangePassword ? "/account/password" : "/admin");
         return;
       }
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
       setError(data.error === "invalid_credentials" ? t.invalid : data.error === "rate_limited" ? t.rateLimited : t.failed);
     } catch {
       setError(t.network);

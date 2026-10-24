@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
   await prisma.adminUser.update({ where: { id: admin.id }, data: { lastLoginAt: new Date() } });
   await audit(admin.id, "login");
 
-  const res = NextResponse.json({ ok: true });
+  const res = NextResponse.json({ ok: true, roles: admin.roles, mustChangePassword: admin.mustChangePassword });
   res.cookies.set(SESSION_COOKIE, await signSession(admin.id), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

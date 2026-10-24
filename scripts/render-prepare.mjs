@@ -35,7 +35,7 @@ if (email && password && password.length < 12) {
       console.log(`[render-prepare] Staff account ${email} already exists — left unchanged.`);
     } else {
       await prisma.adminUser.create({
-        data: { email, name: process.env.ADMIN_NAME?.trim() || email, passwordHash: await bcrypt.hash(password, 12) },
+        data: { email, name: process.env.ADMIN_NAME?.trim() || email, passwordHash: await bcrypt.hash(password, 12), roles: ["ADMIN"] },
       });
       console.log(`[render-prepare] Created staff account ${email}.`);
     }

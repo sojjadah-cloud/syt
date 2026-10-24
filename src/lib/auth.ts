@@ -1,25 +1,47 @@
 import "server-only";
+import type { StaffRole } from "@prisma/client";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "./db";
 import { SESSION_COOKIE, verifySession } from "./session";
 
-export type AdminSession = { id: string; email: string; name: string };
+export type SessionUser = {
+  id: string;
+  email: string;
+  name: string;
+  roles: StaffRole[];
+  mustChangePassword: boolean;
+};
+/** Kept for existing admin pages. */
+export type AdminSession = SessionUser;
 
-/** Server-side authorisation: verifies the signed cookie AND that the account is still active. */
-export async function getAdmin(): Promise<AdminSession | null> {
+/** Server-side authentication: verifies the signed cookie AND that the account is still active. */
+export async function getUser(): Promise<SessionUser | null> {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   const id = await verifySession(token);
   if (!id) return null;
-  const admin = await prisma.adminUser.findUnique({ where: { id }, select: { id: true, email: true, name: true, active: true } });
-  if (!admin?.active) return null;
-  return { id: admin.id, email: admin.email, name: admin.name };
+  const u = await prisma.adminUser.findUnique({
+    where: { id },
+    select: { id: true, email: true, name: true, active: true, roles: true, mustChangePassword: true },
+  });
+  if (!u?.active) return null;
+  return { id: u.id, email: u.email, name: u.name, roles: u.roles, mustChangePassword: u.mustChangePassword };
 }
 
-export async function requireAdmin(): Promise<AdminSession> {
-  const admin = await getAdmin();
-  if (!admin) redirect("/admin/login");
-  return admin;
+export const hasRole = (u: SessionUser | null, role: StaffRole) => !!u?.roles.includes(role);
+
+/** Administrator only (department administrators). */
+export async function getAdmin(): Promise<SessionUser | null> {
+  const u = await getUser();
+  return hasRole(u, "ADMIN") ? u : null;
+}
+
+export async function requireAdmin(): Promise<SessionUser> {
+  const u = await getUser();
+  if (!u) redirect("/admin/login");
+  if (u.mustChangePassword) redirect("/account/password");
+  if (!hasRole(u, "ADMIN")) redirect("/admin/login");
+  return u;
 }
 
 export async function audit(adminId: string | null, action: string, detail?: string) {

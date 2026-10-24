@@ -111,32 +111,33 @@ enum SupportType {
 }
 
 model Submission {
-  id               String        @id @default(cuid())
-  referenceNo      String        @unique
-  idempotencyKey   String        @unique
+  id             String        @id @default(cuid())
+  referenceNo    String        @unique
+  idempotencyKey String        @unique
   // Q1–Q4
-  fullName         String
-  studentId        String        @unique
-  academicLevel    AcademicLevel
-  specialisation   String
-  iseTrack         IseTrack?
-  iseTrackOther    String?
+  fullName       String
+  studentId      String        @unique
+  academicLevel  AcademicLevel
+  specialisation String
+  iseTrack       IseTrack?
+  iseTrackOther  String?
   // Q9–Q10
-  skillsAndTools   String
-  achievements     String?
+  skillsAndTools String
+  achievements   String?
   // Q11–Q13
-  readiness        Readiness
-  weeklyHours      WeeklyHours
-  teamRole         TeamRole
-  locale           String        @default("en")
-  consentAt        DateTime
-  createdAt        DateTime      @default(now())
+  readiness      Readiness
+  weeklyHours    WeeklyHours
+  teamRole       TeamRole
+  locale         String        @default("en")
+  consentAt      DateTime
+  createdAt      DateTime      @default(now())
 
   interests   SubmissionInterest[]
   fields      SubmissionField[]
   experiences SubmissionExperience[]
   barriers    SubmissionBarrier[]
   supports    SubmissionSupport[]
+  initiatives InitiativeStudent[]
 
   @@index([academicLevel])
   @@index([specialisation])
@@ -194,24 +195,705 @@ model SubmissionSupport {
   @@index([support])
 }
 
+// Every signed-in user (department administrators and staff). Roles are assigned
+// by an administrator; one person may hold several roles.
 model AdminUser {
-  id           String     @id @default(cuid())
-  email        String     @unique
-  name         String
-  passwordHash String
-  active       Boolean    @default(true)
-  createdAt    DateTime   @default(now())
-  lastLoginAt  DateTime?
-  auditLogs    AuditLog[]
+  id                 String                   @id @default(cuid())
+  email              String                   @unique
+  name               String
+  passwordHash       String
+  active             Boolean                  @default(true)
+  roles              StaffRole[]              @default([])
+  mustChangePassword Boolean                  @default(false)
+  createdAt          DateTime                 @default(now())
+  lastLoginAt        DateTime?
+  auditLogs          AuditLog[]
+  profile            StaffProfile?
+  initiativesCreated Initiative[]             @relation("InitiativeCreator")
+  statusChanges      InitiativeStatusChange[]
 }
 
 model AuditLog {
-  id        String    @id @default(cuid())
+  id        String     @id @default(cuid())
   adminId   String?
   admin     AdminUser? @relation(fields: [adminId], references: [id], onDelete: SetNull)
   action    String
   detail    String?
-  createdAt DateTime  @default(now())
+  createdAt DateTime   @default(now())
 
   @@index([createdAt])
+}
+
+// ===========================================================================
+// Staff Scientific Engagement System
+// ===========================================================================
+
+enum StaffRole {
+  ADMIN
+  PATHWAY_LEADER
+  MODULE_COORDINATOR
+  ACADEMIC_STAFF
+}
+
+enum SurveyStatus {
+  DRAFT
+  SUBMITTED
+}
+
+enum ReviewStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  DECLINED
+}
+
+enum YesNoNotCurrently {
+  YES
+  NO
+  NOT_CURRENTLY
+}
+
+enum YesPossiblyNot {
+  YES
+  POSSIBLY
+  NOT_CURRENTLY
+}
+
+enum Priority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum Participation {
+  INDIVIDUAL
+  TEAM
+  EITHER
+  UNSPECIFIED
+}
+
+// Survey A — Q3
+enum ScientificActivityType {
+  ENGINEERING_COMPETITIONS
+  TECHNICAL_CHALLENGES
+  SCIENTIFIC_RESEARCH
+  INNOVATION_PROJECTS
+  HACKATHONS
+  SCIENTIFIC_CONFERENCES
+  TECHNICAL_EXHIBITIONS
+  INDUSTRY_CHALLENGES
+  PROFESSIONAL_TRAINING
+  ACADEMIC_VISITS
+  OTHER
+}
+
+enum OpportunityType {
+  COMPETITION
+  TECHNICAL_CHALLENGE
+  HACKATHON
+  CONFERENCE
+  EXHIBITION
+  RESEARCH_PROGRAMME
+  TRAINING_PROGRAMME
+  INDUSTRY_CHALLENGE
+  OTHER
+}
+
+// Survey A — Q8
+enum PreparationMethod {
+  SPECIALISED_WORKSHOPS
+  PRACTICAL_TRAINING
+  INTERNAL_COMPETITIONS
+  TECHNICAL_PROJECTS
+  RESEARCH_GROUPS
+  MENTORING
+  INDUSTRY_COLLABORATION
+  EXTERNAL_TRAINING
+  OTHER
+}
+
+// Survey A — Q9
+enum ParticipationChallenge {
+  LIMITED_SKILLS
+  LIMITED_AWARENESS
+  EQUIPMENT_SOFTWARE
+  PREPARATION_TIME
+  SCHEDULE_CONFLICTS
+  TEAM_FORMATION
+  FUNDING_TRAVEL
+  ELIGIBILITY
+  OTHER
+}
+
+// Survey A — Q11
+enum DepartmentSupport {
+  FUNDING
+  EQUIPMENT_SOFTWARE
+  LABORATORY_ACCESS
+  TIME_ALLOCATION
+  TRAVEL_LOGISTICS
+  ADDITIONAL_STAFF
+  ADMINISTRATIVE_SUPPORT
+  INDUSTRY_LINKS
+  OTHER
+}
+
+// Survey B
+enum ModuleActivityType {
+  ENGINEERING_PROJECT
+  PRACTICAL_CHALLENGE
+  STUDENT_COMPETITION
+  LABORATORY_ACTIVITY
+  DESIGN_TASK
+  RESEARCH_TASK
+  OTHER
+}
+
+enum AssessmentMethod {
+  PRACTICAL_DEMONSTRATION
+  ENGINEERING_PROTOTYPE
+  TECHNICAL_SIMULATION
+  PROBLEM_SOLVING
+  LABORATORY_PERFORMANCE
+  TECHNICAL_REPORT
+  PRESENTATION_VIVA
+  TEAM_PROJECT
+  COMPETITION_RUBRIC
+  OTHER
+}
+
+enum ActivityTiming {
+  BEGINNING
+  MIDDLE
+  END
+  THROUGHOUT
+  OUTSIDE_TEACHING
+  TO_BE_DETERMINED
+}
+
+enum CompetitionPotential {
+  INTERNAL
+  EXTERNAL
+  BOTH
+  NOT_CURRENTLY
+  NEEDS_ASSESSMENT
+}
+
+// Survey C
+enum ExpertiseArea {
+  PROGRAMMING
+  ARTIFICIAL_INTELLIGENCE
+  CYBERSECURITY
+  COMMUNICATIONS
+  NETWORKING
+  EMBEDDED_SYSTEMS
+  ELECTRONICS
+  ROBOTICS
+  AUTOMATION
+  DATA_ANALYTICS
+  ENGINEERING_DESIGN
+  SPACE_SYSTEMS
+  RESEARCH_METHODOLOGY
+  TECHNICAL_WRITING
+  PROJECT_MANAGEMENT
+  INNOVATION
+  OTHER
+}
+
+enum SupportArea {
+  ENGINEERING_PROJECTS
+  SCIENTIFIC_RESEARCH
+  TECHNICAL_WORKSHOPS
+  SCIENTIFIC_COMPETITIONS
+  INNOVATION_PROJECTS
+  RESEARCH_WRITING
+  TECHNICAL_MENTORING
+  COMPETITION_PREPARATION
+  PROJECT_EVALUATION
+  INDUSTRY_COLLABORATION
+  OTHER
+}
+
+enum MentorWillingness {
+  YES
+  DEPENDS
+  NOT_CURRENTLY
+}
+
+enum DeliveryPreference {
+  LAB_WORKSHOPS
+  CLASSROOM_SESSIONS
+  SHORT_INTENSIVE
+  LONG_TERM_SUPERVISION
+  REGULAR_MENTORING
+  RESEARCH_SUPERVISION
+  REMOTE_SESSIONS
+  JOINT_SESSIONS
+}
+
+enum PreferredDuration {
+  H1_2
+  H3_4
+  D2_5
+  SEVERAL_WEEKS
+  LONG_TERM
+  FLEXIBLE
+}
+
+enum Availability {
+  WORKING_HOURS
+  AFTER_TEACHING
+  ACTIVITY_PERIODS
+  ACADEMIC_BREAKS
+  PRIOR_ARRANGEMENT
+}
+
+enum CollaborationPreference {
+  INDIVIDUALLY
+  ACADEMIC_STAFF
+  TECHNICAL_STAFF
+  JOINT_TEAM
+  NO_PREFERENCE
+}
+
+enum SuperviseExternal {
+  YES
+  DEPENDS_AVAILABILITY
+  DEPENDS_TOPIC
+  NOT_CURRENTLY
+}
+
+enum WorkshopFormat {
+  LABORATORY
+  CLASSROOM
+  ONLINE
+  HYBRID
+}
+
+enum StaffContributionType {
+  LEAD_SUPERVISOR
+  CO_SUPERVISOR
+  ADVISOR
+  TECHNICAL_SUPPORT
+}
+
+enum InitiativeStatus {
+  PROPOSED
+  UNDER_REVIEW
+  APPROVED
+  IN_PREPARATION
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum StudentAssignmentStatus {
+  SUGGESTED
+  INVITED
+  CONFIRMED
+  WITHDRAWN
+}
+
+// ---------------------------------------------------------------------------
+// Profiles and pathways
+// ---------------------------------------------------------------------------
+
+/// Official academic pathways (codes match the student survey specialisations).
+model AcademicPathway {
+  code      String  @id
+  nameEn    String
+  nameAr    String
+  active    Boolean @default(true)
+  sortOrder Int     @default(0)
+
+  staffAssignments StaffPathwayAssignment[]
+  pathwaySurveys   PathwaySurveyPathway[]
+  initiatives      Initiative[]
+}
+
+model StaffProfile {
+  id         String     @id @default(cuid())
+  /// Staff fill the surveys without an account; profiles are matched by email.
+  email      String?    @unique
+  userId     String?    @unique
+  user       AdminUser? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  fullName   String
+  position   String
+  department String
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  pathways        StaffPathwayAssignment[]
+  pathwaySurveys  PathwaySurvey[]
+  moduleSurveys   ModuleSurvey[]
+  contributions   ContributionSurvey[]
+  initiativeRoles InitiativeStaff[]
+}
+
+model StaffPathwayAssignment {
+  profileId   String
+  pathwayCode String
+  profile     StaffProfile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  pathway     AcademicPathway @relation(fields: [pathwayCode], references: [code])
+
+  @@id([profileId, pathwayCode])
+}
+
+// ---------------------------------------------------------------------------
+// Survey A — Pathway leaders
+// ---------------------------------------------------------------------------
+
+model PathwaySurvey {
+  id                      String                   @id @default(cuid())
+  profileId               String
+  profile                 StaffProfile             @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  status                  SurveyStatus             @default(DRAFT)
+  competencies            String                   @default("")
+  activityTypes           ScientificActivityType[] @default([])
+  activityTypesOther      String                   @default("")
+  knowsCompetitions       YesNoNotCurrently?
+  knowsOtherOpportunities YesNoNotCurrently?
+  targetLevels            AcademicLevel[]          @default([])
+  preparationSkills       String                   @default("")
+  preparationMethods      PreparationMethod[]      @default([])
+  preparationMethodsOther String                   @default("")
+  challenges              ParticipationChallenge[] @default([])
+  challengesOther         String                   @default("")
+  partners                String                   @default("")
+  supportNeeded           DepartmentSupport[]      @default([])
+  supportDetails          String                   @default("")
+  submittedAt             DateTime?
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+
+  pathways        PathwaySurveyPathway[]
+  opportunities   ScientificOpportunity[]
+  recommendations PathwayRecommendation[]
+
+  @@index([profileId, status])
+}
+
+model PathwaySurveyPathway {
+  surveyId    String
+  pathwayCode String
+  survey      PathwaySurvey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  pathway     AcademicPathway @relation(fields: [pathwayCode], references: [code])
+
+  @@id([surveyId, pathwayCode])
+  @@index([pathwayCode])
+}
+
+/// One competition, conference or other external opportunity. Unknown values stay null/empty.
+model ScientificOpportunity {
+  id                   String           @id @default(cuid())
+  surveyId             String
+  survey               PathwaySurvey    @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  name                 String
+  type                 OpportunityType
+  organiser            String           @default("")
+  location             String           @default("")
+  url                  String           @default("")
+  expectedDate         DateTime?
+  registrationDeadline DateTime?
+  targetLevels         AcademicLevel[]  @default([])
+  participation        Participation    @default(UNSPECIFIED)
+  teamSize             Int?
+  requiredFields       TechnicalField[] @default([])
+  requiredSkills       String           @default("")
+  eligibility          String           @default("")
+  preparation          String           @default("")
+  preparationDuration  String           @default("")
+  equipment            String           @default("")
+  supportExpected      String           @default("")
+  priority             Priority         @default(MEDIUM)
+  notes                String           @default("")
+  sortOrder            Int              @default(0)
+  reviewStatus         ReviewStatus     @default(PENDING)
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  initiatives Initiative[]
+
+  @@index([type])
+  @@index([reviewStatus])
+  @@index([priority])
+}
+
+/// Survey A — Q12 (top recommended initiatives).
+model PathwayRecommendation {
+  id          String        @id @default(cuid())
+  surveyId    String
+  survey      PathwaySurvey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  name        String
+  description String        @default("")
+  benefit     String        @default("")
+  priority    Priority      @default(MEDIUM)
+  period      String        @default("")
+  sortOrder   Int           @default(0)
+}
+
+// ---------------------------------------------------------------------------
+// Survey B — TNA module coordinators (one module per survey)
+// ---------------------------------------------------------------------------
+
+model AcademicModule {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  surveys ModuleSurvey[]
+}
+
+model ModuleSurvey {
+  id                 String          @id @default(cuid())
+  profileId          String
+  profile            StaffProfile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  moduleId           String?
+  module             AcademicModule? @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  status             SurveyStatus    @default(DRAFT)
+  moduleName         String          @default("")
+  moduleCode         String          @default("")
+  level              AcademicLevel?
+  semester           String          @default("")
+  overview           String          @default("")
+  competencies       String          @default("")
+  hasPractical       Boolean?
+  practicalDetails   String          @default("")
+  canSupportActivity YesPossiblyNot?
+  resources          String          @default("")
+  submittedAt        DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  outcomes   ModuleLearningOutcome[]
+  activities ModuleActivity[]
+
+  @@index([profileId, status])
+}
+
+model ModuleLearningOutcome {
+  id          String       @id @default(cuid())
+  surveyId    String
+  survey      ModuleSurvey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  identifier  String
+  description String
+  category    String       @default("")
+  sortOrder   Int          @default(0)
+
+  activities ActivityLearningOutcome[]
+}
+
+model ModuleActivity {
+  id                   String                @id @default(cuid())
+  surveyId             String
+  survey               ModuleSurvey          @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  title                String
+  type                 ModuleActivityType
+  description          String                @default("")
+  engineeringProblem   String                @default("")
+  studentTasks         String                @default("")
+  deliverables         String                @default("")
+  format               Participation         @default(UNSPECIFIED)
+  teamSize             Int?
+  duration             String                @default("")
+  resources            String                @default("")
+  assessmentMethods    AssessmentMethod[]    @default([])
+  assessmentOther      String                @default("")
+  timing               ActivityTiming?
+  competitionPotential CompetitionPotential?
+  competitionNote      String                @default("")
+  sortOrder            Int                   @default(0)
+  reviewStatus         ReviewStatus          @default(PENDING)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+
+  outcomes    ActivityLearningOutcome[]
+  initiatives Initiative[]
+}
+
+model ActivityLearningOutcome {
+  activityId String
+  outcomeId  String
+  activity   ModuleActivity        @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  outcome    ModuleLearningOutcome @relation(fields: [outcomeId], references: [id], onDelete: Cascade)
+
+  @@id([activityId, outcomeId])
+}
+
+// ---------------------------------------------------------------------------
+// Survey C — Academic & technical staff contributions
+// ---------------------------------------------------------------------------
+
+model ContributionSurvey {
+  id                  String                   @id @default(cuid())
+  profileId           String
+  profile             StaffProfile             @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  status              SurveyStatus             @default(DRAFT)
+  expertise           ExpertiseArea[]          @default([])
+  expertiseOther      String                   @default("")
+  supportAreas        SupportArea[]            @default([])
+  supportAreasOther   String                   @default("")
+  workshopIntent      YesPossiblyNot?
+  projectIntent       YesPossiblyNot?
+  mentorCompetitions  MentorWillingness?
+  mentorFields        ExpertiseArea[]          @default([])
+  deliveryPreferences DeliveryPreference[]     @default([])
+  levels              AcademicLevel[]          @default([])
+  duration            PreferredDuration?
+  availability        Availability[]           @default([])
+  availabilityNote    String                   @default("")
+  collaboration       CollaborationPreference?
+  resourcesNeeded     String                   @default("")
+  superviseExternal   SuperviseExternal?
+  recommendations     String                   @default("")
+  submittedAt         DateTime?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+
+  workshops ProposedWorkshop[]
+  projects  ProposedProject[]
+
+  @@index([profileId, status])
+}
+
+model ProposedWorkshop {
+  id               String             @id @default(cuid())
+  surveyId         String
+  survey           ContributionSurvey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  title            String
+  field            ExpertiseArea
+  description      String             @default("")
+  objectives       String             @default("")
+  levels           AcademicLevel[]    @default([])
+  prerequisites    String             @default("")
+  maxParticipants  Int?
+  format           WorkshopFormat?
+  duration         String             @default("")
+  equipment        String             @default("")
+  venue            String             @default("")
+  period           String             @default("")
+  expectedOutcomes String             @default("")
+  sortOrder        Int                @default(0)
+  reviewStatus     ReviewStatus       @default(PENDING)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  initiatives Initiative[]
+
+  @@index([field])
+}
+
+model ProposedProject {
+  id                 String                 @id @default(cuid())
+  surveyId           String
+  survey             ContributionSurvey     @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  title              String
+  field              ExpertiseArea
+  problem            String                 @default("")
+  description        String                 @default("")
+  expectedOutcomes   String                 @default("")
+  requiredFields     TechnicalField[]       @default([])
+  requiredSkills     String                 @default("")
+  levels             AcademicLevel[]        @default([])
+  studentCount       Int?
+  duration           String                 @default("")
+  resources          String                 @default("")
+  contributionType   StaffContributionType?
+  publicationOptions String                 @default("")
+  collaboration      String                 @default("")
+  sortOrder          Int                    @default(0)
+  reviewStatus       ReviewStatus           @default(PENDING)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+
+  initiatives Initiative[]
+
+  @@index([field])
+}
+
+// ---------------------------------------------------------------------------
+// Scientific planning
+// ---------------------------------------------------------------------------
+
+model Initiative {
+  id               String                 @id @default(cuid())
+  title            String
+  pathwayCode      String?
+  pathway          AcademicPathway?       @relation(fields: [pathwayCode], references: [code])
+  opportunityId    String?
+  opportunity      ScientificOpportunity? @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
+  workshopId       String?
+  workshop         ProposedWorkshop?      @relation(fields: [workshopId], references: [id], onDelete: SetNull)
+  projectId        String?
+  project          ProposedProject?       @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  moduleActivityId String?
+  moduleActivity   ModuleActivity?        @relation(fields: [moduleActivityId], references: [id], onDelete: SetNull)
+  requiredFields   TechnicalField[]       @default([])
+  targetLevels     AcademicLevel[]        @default([])
+  preparationPlan  String                 @default("")
+  resources        String                 @default("")
+  startDate        DateTime?
+  endDate          DateTime?
+  status           InitiativeStatus       @default(PROPOSED)
+  notes            String                 @default("")
+  outcomes         String                 @default("")
+  createdById      String?
+  createdBy        AdminUser?             @relation("InitiativeCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+
+  staff         InitiativeStaff[]
+  students      InitiativeStudent[]
+  milestones    InitiativeMilestone[]
+  statusChanges InitiativeStatusChange[]
+
+  @@index([status])
+}
+
+model InitiativeStaff {
+  initiativeId String
+  profileId    String
+  role         String       @default("")
+  confirmed    Boolean      @default(false)
+  initiative   Initiative   @relation(fields: [initiativeId], references: [id], onDelete: Cascade)
+  profile      StaffProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@id([initiativeId, profileId])
+}
+
+model InitiativeStudent {
+  initiativeId String
+  submissionId String
+  status       StudentAssignmentStatus @default(SUGGESTED)
+  initiative   Initiative              @relation(fields: [initiativeId], references: [id], onDelete: Cascade)
+  submission   Submission              @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  createdAt    DateTime                @default(now())
+
+  @@id([initiativeId, submissionId])
+}
+
+model InitiativeMilestone {
+  id           String     @id @default(cuid())
+  initiativeId String
+  initiative   Initiative @relation(fields: [initiativeId], references: [id], onDelete: Cascade)
+  title        String
+  dueDate      DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime   @default(now())
+}
+
+model InitiativeStatusChange {
+  id           String            @id @default(cuid())
+  initiativeId String
+  initiative   Initiative        @relation(fields: [initiativeId], references: [id], onDelete: Cascade)
+  fromStatus   InitiativeStatus?
+  toStatus     InitiativeStatus
+  note         String            @default("")
+  changedById  String?
+  changedBy    AdminUser?        @relation(fields: [changedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime          @default(now())
+
+  @@index([initiativeId, createdAt])
 }
