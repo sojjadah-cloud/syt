@@ -30,7 +30,7 @@ async function build(type: string, raw: RawParams, i: AdminI18n): Promise<Table 
     });
     return {
       title: e.opportunities.title,
-      head: [q.name, q.type, e.opportunities.f.pathway, e.common.submittedBy, q.organiser, q.location, q.url, q.expectedDate, q.deadline, q.levels, q.participation, q.teamSize, q.requiredFields, q.requiredSkills, q.eligibility, q.preparation, q.preparationDuration, q.equipment, q.support, q.priority, e.common.reviewStatus, q.notes],
+      head: [q.name, q.type, e.opportunities.f.pathway, e.common.submittedBy, q.organiser, q.location, q.url, q.expectedDate, q.deadline, q.levels, q.participation, q.teamSize, q.requiredFields, q.requiredSkills, q.eligibility, q.preparation, q.equipment, q.priority, e.common.reviewStatus, q.notes],
       rows: rows.map((r) => [
         r.name,
         s.options.opportunityTypes[r.type],
@@ -45,12 +45,9 @@ async function build(type: string, raw: RawParams, i: AdminI18n): Promise<Table 
         s.options.participation[r.participation],
         r.teamSize ?? "",
         j(r.requiredFields.map((f) => o.fields[f])),
-        r.requiredSkills,
         r.eligibility,
         r.preparation,
-        r.preparationDuration,
         r.equipment,
-        r.supportExpected,
         s.options.priority[r.priority],
         s.common.reviewStatus[r.reviewStatus],
         r.notes,
@@ -66,7 +63,7 @@ async function build(type: string, raw: RawParams, i: AdminI18n): Promise<Table 
     const p = s.pathway;
     return {
       title: e.pathways.title,
-      head: [e.opportunities.f.pathway, e.pathways.leaders, p.q2, p.q3, e.pathways.opportunities, e.pathways.competitions, p.q6, p.q7, p.q8, p.q9, p.q10, p.q11, p.q12],
+      head: [e.opportunities.f.pathway, e.pathways.leaders, p.q2, p.q3, e.pathways.opportunities, e.pathways.competitions, p.q8, p.q9, p.q10, p.q11, p.q12],
       rows: surveys.map((x) => [
         j(x.pathways.map((y) => i.spec(y.pathwayCode))),
         x.profile.fullName,
@@ -74,8 +71,6 @@ async function build(type: string, raw: RawParams, i: AdminI18n): Promise<Table 
         j(x.activityTypes.map((v) => s.options.activityTypes[v])),
         j(x.opportunities.map((y) => y.name)),
         j(x.opportunities.filter((y) => ["COMPETITION", "TECHNICAL_CHALLENGE", "HACKATHON", "INDUSTRY_CHALLENGE"].includes(y.type)).map((y) => y.name)),
-        lv(x.targetLevels),
-        x.preparationSkills,
         j(x.preparationMethods.map((v) => s.options.preparationMethods[v])),
         j(x.challenges.map((v) => s.options.challenges[v])),
         x.partners,
@@ -129,22 +124,18 @@ async function build(type: string, raw: RawParams, i: AdminI18n): Promise<Table 
     const w = s.contribution.w;
     return {
       title: e.workshops.title,
-      head: [w.title, w.field, e.workshops.cols.staff, w.description, w.objectives, w.levels, w.prerequisites, w.maxParticipants, w.format, w.duration, w.equipment, w.venue, w.period, w.outcomes, e.common.reviewStatus],
+      head: [w.title, w.field, e.workshops.cols.staff, w.description, w.levels, w.maxParticipants, w.format, w.duration, w.equipment, w.period, e.common.reviewStatus],
       rows: rows.map((r) => [
         r.title,
         s.options.expertise[r.field],
         r.survey.profile.fullName,
         r.description,
-        r.objectives,
         lv(r.levels),
-        r.prerequisites,
         r.maxParticipants ?? "",
         r.format ? s.options.workshopFormat[r.format] : "",
         r.duration,
         r.equipment,
-        r.venue,
         r.period,
-        r.expectedOutcomes,
         s.common.reviewStatus[r.reviewStatus],
       ]),
     };
@@ -155,13 +146,12 @@ async function build(type: string, raw: RawParams, i: AdminI18n): Promise<Table 
     const p = s.contribution.p;
     return {
       title: e.research.title,
-      head: [p.title, p.field, e.research.cols.staff, p.problem, p.description, p.outcomes, p.requiredFields, p.requiredSkills, p.levels, p.studentCount, p.duration, p.resources, p.contributionType, p.publication, p.collaboration, e.common.reviewStatus],
+      head: [p.title, p.field, e.research.cols.staff, p.problem, p.outcomes, p.requiredFields, p.levels, p.studentCount, p.duration, p.resources, p.contributionType, e.common.reviewStatus],
       rows: rows.map((r) => [
         r.title,
         s.options.expertise[r.field],
         r.survey.profile.fullName,
         r.problem,
-        r.description,
         r.expectedOutcomes,
         j(r.requiredFields.map((f) => o.fields[f])),
         r.requiredSkills,
@@ -170,8 +160,6 @@ async function build(type: string, raw: RawParams, i: AdminI18n): Promise<Table 
         r.duration,
         r.resources,
         r.contributionType ? s.options.contributionType[r.contributionType] : "",
-        r.publicationOptions,
-        r.collaboration,
         s.common.reviewStatus[r.reviewStatus],
       ]),
     };
@@ -190,7 +178,7 @@ async function build(type: string, raw: RawParams, i: AdminI18n): Promise<Table 
     const c = s.contribution;
     return {
       title: e.reports.staff,
-      head: [e.staff.cols.name, e.staff.position, e.accounts.email, e.staff.pathways, c.q1, c.q2, c.workshop, c.project, c.q5, c.q6, c.q7, c.q8, c.q9, c.q10, c.q12],
+      head: [e.staff.cols.name, e.staff.position, e.accounts.email, e.staff.pathways, c.q1, c.q2, c.workshop, c.project, c.q5, c.q6, c.q7, c.q9],
       rows: profiles.map((p) => {
         const x = p.contributions[0];
         return [
@@ -205,10 +193,7 @@ async function build(type: string, raw: RawParams, i: AdminI18n): Promise<Table 
           x?.mentorCompetitions ? `${s.options.mentor[x.mentorCompetitions]}${x.mentorFields.length ? ` (${j(x.mentorFields.map((v) => s.options.expertise[v]))})` : ""}` : "",
           x ? j(x.deliveryPreferences.map((v) => s.options.delivery[v])) : "",
           x ? lv(x.levels) : "",
-          x?.duration ? s.options.duration[x.duration] : "",
           x ? j([...x.availability.map((v) => s.options.availability[v]), ...(x.availabilityNote ? [x.availabilityNote] : [])]) : "",
-          x?.collaboration ? s.options.collaboration[x.collaboration] : "",
-          x?.superviseExternal ? s.options.superviseExternal[x.superviseExternal] : "",
         ];
       }),
     };

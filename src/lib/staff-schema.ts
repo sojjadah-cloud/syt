@@ -3,16 +3,19 @@
  * Shared by the browser (step-by-step validation) and the server (authoritative checks).
  *
  * The base schemas only normalise input (unknown option values are dropped), so they never
- * fail; every "required" rule lives in the refine functions. Drafts are saved after the base
- * pass plus format checks; submissions must also pass the full rules.
+ * fail; every "required" rule lives in the refine functions.
+ *
+ * Question sets are deliberately short: overlapping questions were merged (e.g. one
+ * "opportunities" question instead of two, per-activity resources instead of a separate
+ * module-level question) and supporting detail can be attached as files.
  */
 import { z } from "zod";
 import {
   ACTIVITY_TIMINGS,
   ALL_LEVELS,
   ASSESSMENT_METHODS,
+  ATTACHMENT_LIMITS,
   AVAILABILITY,
-  COLLABORATION,
   COMPETITION_POTENTIAL,
   CONTRIBUTION_TYPES,
   DELIVERY_PREFERENCES,
@@ -24,13 +27,11 @@ import {
   OPPORTUNITY_TYPES,
   PARTICIPATION,
   PARTICIPATION_CHALLENGES,
-  PREFERRED_DURATIONS,
   PREPARATION_METHODS,
   PRIORITIES,
   SCIENTIFIC_ACTIVITY_TYPES,
   SEMESTERS,
   STAFF_LIMITS,
-  SUPERVISE_EXTERNAL,
   SUPPORT_AREAS,
   WORKSHOP_FORMATS,
   YES_NO_NOT,
@@ -58,11 +59,24 @@ const many = <T extends readonly string[]>(list: T) =>
     (v) => (Array.isArray(v) ? Array.from(new Set(v.filter((x) => (list as readonly string[]).includes(x)))) : []),
     z.array(z.string()),
   ) as unknown as z.ZodType<T[number][]>;
-const optId = z.preprocess((v) => (typeof v === "string" && /^[a-z0-9]{10,40}$/i.test(v) ? v : undefined), z.string().optional());
 const list = <T extends z.ZodTypeAny>(item: T) =>
   z.preprocess((v) => (Array.isArray(v) ? v.slice(0, STAFF_LIMITS.items) : []), z.array(item));
 
+const ID_RE = /^[a-z0-9]{10,40}$/i;
 const PATHWAY_CODES = SPECIALISATIONS.map((s) => s.value);
+
+/** Files uploaded beforehand via /api/staff/upload; only their ids are submitted. */
+export type AttachmentRef = { id: string; name: string; size: number };
+const attachments = z.preprocess(
+  (v) =>
+    Array.isArray(v)
+      ? v
+          .filter((a): a is AttachmentRef => !!a && typeof a === "object" && typeof a.id === "string" && ID_RE.test(a.id))
+          .slice(0, ATTACHMENT_LIMITS.perItem)
+          .map((a) => ({ id: a.id, name: String(a.name ?? "").slice(0, 200), size: Number(a.size) || 0 }))
+      : [],
+  z.array(z.object({ id: z.string(), name: z.string(), size: z.number() })),
+);
 
 // ---------------------------------------------------------------------------
 // Rule helpers
@@ -78,7 +92,7 @@ const isUrl = (v: string) => /^https?:\/\/[^\s]+\.[^\s]+$/i.test(v);
 const isDate = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v));
 const isCount = (v: string) => /^\d{1,4}$/.test(v);
 
-/** Format checks applied to drafts and submissions alike. */
+/** Format checks (links, dates, numbers, lengths). */
 const formats = (ctx: Ctx, path: Path, o: { url?: string; dates?: [string, string][]; counts?: [string, string][]; long?: [string, string][]; short?: [string, string][] }) => {
   if (o.url && !isUrl(o.url)) add(ctx, [...path, "url"], "url");
   o.dates?.forEach(([k, v]) => v && !isDate(v) && add(ctx, [...path, k], "date"));
@@ -96,10 +110,9 @@ export const identitySchema = z.object({
   email: str().transform((s) => s.toLowerCase()),
   position: str(),
   department: str(),
-  pathways: z.preprocess((v) => (Array.isArray(v) ? [...new Set(v.filter((x) => PATHWAY_CODES.includes(x)))] : []), z.array(z.string())),
 });
 export type Identity = z.output<typeof identitySchema>;
-export const emptyIdentity = (): Identity => ({ fullName: "", email: "", position: "", department: "", pathways: [] });
+export const emptyIdentity = (): Identity => ({ fullName: "", email: "", position: "", department: "" });
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
@@ -113,11 +126,11 @@ function identityRules(v: Identity, ctx: Ctx) {
 }
 
 // ===========================================================================
-// Survey A — Pathway leaders
+// Survey A — Pathway leaders (9 questions)
 // ===========================================================================
 
 export const opportunitySchema = z.object({
-  id: optId,
+  id: z.preprocess((v) => (typeof v === "string" && ID_RE.test(v) ? v : undefined), z.string().optional()),
   name: str(),
   type: one(OPPORTUNITY_TYPES),
   organiser: str(),
@@ -132,17 +145,15 @@ export const opportunitySchema = z.object({
   requiredSkills: text(),
   eligibility: text(),
   preparation: text(),
-  preparationDuration: str(),
+  /** Equipment, funding or other support needed (one merged field). */
   equipment: text(),
-  supportExpected: text(),
   priority: one(PRIORITIES),
   notes: text(),
+  attachments,
 });
 export const recommendationSchema = z.object({
-  id: optId,
   name: str(),
   description: text(),
-  benefit: text(),
   priority: one(PRIORITIES),
   period: str(),
 });
@@ -153,25 +164,22 @@ export const pathwayBase = z.object({
   competencies: text(),
   activityTypes: many(SCIENTIFIC_ACTIVITY_TYPES),
   activityTypesOther: str(),
+  /** One question covers competitions, conferences and other opportunities. */
   knowsCompetitions: one(YES_NO_NOT),
-  knowsOtherOpportunities: one(YES_NO_NOT),
   opportunities: list(opportunitySchema),
-  targetLevels: many(LEVEL_OPTIONS),
-  preparationSkills: text(),
   preparationMethods: many(PREPARATION_METHODS),
   preparationMethodsOther: str(),
   challenges: many(PARTICIPATION_CHALLENGES),
   challengesOther: str(),
-  partners: text(),
   supportNeeded: many(DEPARTMENT_SUPPORT),
   supportDetails: text(),
+  partners: text(),
   recommendations: list(recommendationSchema),
 });
 export type PathwayValues = z.output<typeof pathwayBase>;
-export type PathwayData = z.output<typeof pathwayBase>;
+export type PathwayData = PathwayValues;
 
-export const showOpportunities = (v: { knowsCompetitions: string; knowsOtherOpportunities: string }) =>
-  v.knowsCompetitions === "YES" || v.knowsOtherOpportunities === "YES";
+export const showOpportunities = (v: { knowsCompetitions: string }) => v.knowsCompetitions === "YES";
 
 function pathwayFormats(v: PathwayData, ctx: Ctx) {
   v.opportunities.forEach((o, i) =>
@@ -180,10 +188,10 @@ function pathwayFormats(v: PathwayData, ctx: Ctx) {
       dates: [["expectedDate", o.expectedDate], ["registrationDeadline", o.registrationDeadline]],
       counts: [["teamSize", o.teamSize]],
       short: [["name", o.name], ["organiser", o.organiser], ["location", o.location]],
-      long: [["requiredSkills", o.requiredSkills], ["preparation", o.preparation], ["notes", o.notes], ["eligibility", o.eligibility]],
+      long: [["requiredSkills", o.requiredSkills], ["preparation", o.preparation], ["notes", o.notes], ["eligibility", o.eligibility], ["equipment", o.equipment]],
     }),
   );
-  formats(ctx, [], { long: [["competencies", v.competencies], ["preparationSkills", v.preparationSkills], ["partners", v.partners]] });
+  formats(ctx, [], { long: [["competencies", v.competencies], ["partners", v.partners], ["supportDetails", v.supportDetails]] });
 }
 
 function pathwayRules(v: PathwayData, ctx: Ctx) {
@@ -192,7 +200,6 @@ function pathwayRules(v: PathwayData, ctx: Ctx) {
   needSome(ctx, v.activityTypes, ["activityTypes"]);
   needOther(ctx, v.activityTypes, v.activityTypesOther, ["activityTypesOther"]);
   need(ctx, v.knowsCompetitions, ["knowsCompetitions"], "selectOne");
-  need(ctx, v.knowsOtherOpportunities, ["knowsOtherOpportunities"], "selectOne");
   if (showOpportunities(v)) {
     if (v.opportunities.length === 0) add(ctx, ["opportunities"], "needOpportunity");
     v.opportunities.forEach((o, i) => {
@@ -201,8 +208,6 @@ function pathwayRules(v: PathwayData, ctx: Ctx) {
       need(ctx, o.priority, ["opportunities", i, "priority"], "selectOne");
     });
   }
-  needSome(ctx, v.targetLevels, ["targetLevels"]);
-  need(ctx, v.preparationSkills, ["preparationSkills"]);
   needSome(ctx, v.preparationMethods, ["preparationMethods"]);
   needOther(ctx, v.preparationMethods, v.preparationMethodsOther, ["preparationMethodsOther"]);
   needSome(ctx, v.challenges, ["challenges"]);
@@ -212,7 +217,6 @@ function pathwayRules(v: PathwayData, ctx: Ctx) {
   v.recommendations.forEach((r, i) => need(ctx, r.name, ["recommendations", i, "name"]));
 }
 
-export const pathwayDraft = pathwayBase.superRefine(pathwayFormats);
 export const pathwaySubmit = pathwayBase.superRefine((v, ctx) => {
   identityRules(v.identity, ctx);
   pathwayFormats(v, ctx);
@@ -222,9 +226,8 @@ export const pathwaySubmit = pathwayBase.superRefine((v, ctx) => {
 export const PATHWAY_STEPS: (keyof PathwayData)[][] = [
   ["identity"],
   ["pathways", "competencies", "activityTypes", "activityTypesOther"],
-  ["knowsCompetitions", "knowsOtherOpportunities", "opportunities"],
-  ["targetLevels", "preparationSkills", "preparationMethods", "preparationMethodsOther", "challenges", "challengesOther"],
-  ["partners", "supportNeeded", "supportDetails", "recommendations"],
+  ["knowsCompetitions", "opportunities"],
+  ["preparationMethods", "preparationMethodsOther", "challenges", "challengesOther", "supportNeeded", "supportDetails", "partners", "recommendations"],
 ];
 
 export const emptyOpportunity = (): z.output<typeof opportunitySchema> => ({
@@ -242,54 +245,48 @@ export const emptyOpportunity = (): z.output<typeof opportunitySchema> => ({
   requiredSkills: "",
   eligibility: "",
   preparation: "",
-  preparationDuration: "",
   equipment: "",
-  supportExpected: "",
   priority: "MEDIUM",
   notes: "",
+  attachments: [],
 });
-export const emptyRecommendation = (): z.output<typeof recommendationSchema> => ({ name: "", description: "", benefit: "", priority: "MEDIUM", period: "" });
+export const emptyRecommendation = (): z.output<typeof recommendationSchema> => ({ name: "", description: "", priority: "MEDIUM", period: "" });
 
-export const emptyPathway = (pathways: string[] = []): PathwayValues => ({
+export const emptyPathway = (): PathwayValues => ({
   identity: emptyIdentity(),
-  pathways,
+  pathways: [],
   competencies: "",
   activityTypes: [],
   activityTypesOther: "",
   knowsCompetitions: "",
-  knowsOtherOpportunities: "",
   opportunities: [],
-  targetLevels: [],
-  preparationSkills: "",
   preparationMethods: [],
   preparationMethodsOther: "",
   challenges: [],
   challengesOther: "",
-  partners: "",
   supportNeeded: [],
   supportDetails: "",
+  partners: "",
   recommendations: [emptyRecommendation()],
 });
 
 // ===========================================================================
-// Survey B — TNA module coordinators
+// Survey B — TNA module coordinators (7 questions + activities)
 // ===========================================================================
 
 export const outcomeSchema = z.object({
   key: z.preprocess((v) => (typeof v === "string" && /^[\w-]{6,64}$/.test(v) ? v : ""), z.string()),
-  id: optId,
   identifier: str(),
   description: text(),
   category: str(),
 });
 export const activitySchema = z.object({
-  id: optId,
   title: str(),
   type: one(MODULE_ACTIVITY_TYPES),
+  /** Description including the engineering problem. */
   description: text(),
-  engineeringProblem: text(),
+  /** Student tasks and expected deliverables. */
   studentTasks: text(),
-  deliverables: text(),
   format: one(PARTICIPATION),
   teamSize: str(),
   duration: str(),
@@ -300,6 +297,7 @@ export const activitySchema = z.object({
   timing: one(ACTIVITY_TIMINGS),
   competitionPotential: one(COMPETITION_POTENTIAL),
   competitionNote: text(),
+  attachments,
 });
 
 export const moduleBase = z.object({
@@ -309,27 +307,31 @@ export const moduleBase = z.object({
   level: one(ACADEMIC_LEVELS),
   semester: one(SEMESTERS),
   overview: text(),
+  /** e.g. module descriptor or outline. */
+  attachments,
   outcomes: list(outcomeSchema),
-  competencies: text(),
   hasPractical: one(["YES", "NO"] as const),
   practicalDetails: text(),
   canSupportActivity: one(YES_POSSIBLY_NOT),
   activities: list(activitySchema),
-  resources: text(),
 });
 export type ModuleValues = z.output<typeof moduleBase>;
-export type ModuleData = z.output<typeof moduleBase>;
+export type ModuleData = ModuleValues;
 
 export const showActivities = (v: { canSupportActivity: string }) => v.canSupportActivity === "YES" || v.canSupportActivity === "POSSIBLY";
 
 function moduleFormats(v: ModuleData, ctx: Ctx) {
-  formats(ctx, [], { short: [["moduleName", v.moduleName], ["moduleCode", v.moduleCode]], long: [["overview", v.overview], ["competencies", v.competencies]] });
+  formats(ctx, [], { short: [["moduleName", v.moduleName], ["moduleCode", v.moduleCode]], long: [["overview", v.overview], ["practicalDetails", v.practicalDetails]] });
   v.outcomes.forEach((o, i) => {
     if (!o.key) add(ctx, ["outcomes", i, "identifier"], "required");
     formats(ctx, ["outcomes", i], { short: [["identifier", o.identifier]], long: [["description", o.description]] });
   });
   v.activities.forEach((a, i) =>
-    formats(ctx, ["activities", i], { counts: [["teamSize", a.teamSize]], short: [["title", a.title]], long: [["description", a.description]] }),
+    formats(ctx, ["activities", i], {
+      counts: [["teamSize", a.teamSize]],
+      short: [["title", a.title]],
+      long: [["description", a.description], ["studentTasks", a.studentTasks], ["resources", a.resources]],
+    }),
   );
 }
 
@@ -344,7 +346,6 @@ function moduleRules(v: ModuleData, ctx: Ctx) {
     need(ctx, o.identifier, ["outcomes", i, "identifier"]);
     need(ctx, o.description, ["outcomes", i, "description"]);
   });
-  need(ctx, v.competencies, ["competencies"]);
   need(ctx, v.hasPractical, ["hasPractical"], "selectOne");
   if (v.hasPractical === "YES") need(ctx, v.practicalDetails, ["practicalDetails"]);
   need(ctx, v.canSupportActivity, ["canSupportActivity"], "selectOne");
@@ -362,7 +363,6 @@ function moduleRules(v: ModuleData, ctx: Ctx) {
   }
 }
 
-export const moduleDraft = moduleBase.superRefine(moduleFormats);
 export const moduleSubmit = moduleBase.superRefine((v, ctx) => {
   identityRules(v.identity, ctx);
   moduleFormats(v, ctx);
@@ -371,10 +371,9 @@ export const moduleSubmit = moduleBase.superRefine((v, ctx) => {
 
 export const MODULE_STEPS: (keyof ModuleData)[][] = [
   ["identity"],
-  ["moduleName", "moduleCode", "level", "semester", "overview"],
-  ["outcomes", "competencies", "hasPractical", "practicalDetails"],
+  ["moduleName", "moduleCode", "level", "semester", "overview", "attachments"],
+  ["outcomes", "hasPractical", "practicalDetails"],
   ["canSupportActivity", "activities"],
-  ["resources"],
 ];
 
 export const emptyOutcome = (key: string) => ({ key, identifier: "", description: "", category: "" });
@@ -382,9 +381,7 @@ export const emptyActivity = (): z.output<typeof activitySchema> => ({
   title: "",
   type: "ENGINEERING_PROJECT",
   description: "",
-  engineeringProblem: "",
   studentTasks: "",
-  deliverables: "",
   format: "UNSPECIFIED",
   teamSize: "",
   duration: "",
@@ -395,6 +392,7 @@ export const emptyActivity = (): z.output<typeof activitySchema> => ({
   timing: "",
   competitionPotential: "",
   competitionNote: "",
+  attachments: [],
 });
 export const emptyModule = (): ModuleValues => ({
   identity: emptyIdentity(),
@@ -403,51 +401,46 @@ export const emptyModule = (): ModuleValues => ({
   level: "",
   semester: "",
   overview: "",
+  attachments: [],
   outcomes: [],
-  competencies: "",
   hasPractical: "",
   practicalDetails: "",
   canSupportActivity: "",
   activities: [],
-  resources: "",
 });
 
 // ===========================================================================
-// Survey C — Academic & technical staff contributions
+// Survey C — Academic & technical staff contributions (10 questions)
 // ===========================================================================
 
 export const workshopSchema = z.object({
-  id: optId,
   title: str(),
   field: one(EXPERTISE_AREAS),
+  /** Description, objectives and expected outcomes. */
   description: text(),
-  objectives: text(),
   levels: many(LEVEL_OPTIONS),
-  prerequisites: text(),
   maxParticipants: str(),
   format: one(WORKSHOP_FORMATS),
   duration: str(),
+  /** Equipment and laboratory/venue. */
   equipment: text(),
-  venue: str(),
   period: str(),
-  expectedOutcomes: text(),
+  attachments,
 });
 export const projectSchema = z.object({
-  id: optId,
   title: str(),
   field: one(EXPERTISE_AREAS),
+  /** Problem statement and brief description. */
   problem: text(),
-  description: text(),
+  /** Expected outcomes, including competition or publication opportunities. */
   expectedOutcomes: text(),
   requiredFields: many(TECHNICAL_FIELDS),
-  requiredSkills: text(),
   levels: many(LEVEL_OPTIONS),
   studentCount: str(),
   duration: str(),
   resources: text(),
   contributionType: one(CONTRIBUTION_TYPES),
-  publicationOptions: text(),
-  collaboration: text(),
+  attachments,
 });
 
 export const contributionBase = z.object({
@@ -460,20 +453,18 @@ export const contributionBase = z.object({
   workshops: list(workshopSchema),
   projectIntent: one(YES_POSSIBLY_NOT),
   projects: list(projectSchema),
+  /** Covers competition mentoring and supervising teams in external events. */
   mentorCompetitions: one(MENTOR_WILLINGNESS),
   mentorFields: many(EXPERTISE_AREAS),
   deliveryPreferences: many(DELIVERY_PREFERENCES),
   levels: many(LEVEL_OPTIONS),
-  duration: one(PREFERRED_DURATIONS),
   availability: many(AVAILABILITY),
   availabilityNote: str(),
-  collaboration: one(COLLABORATION),
   resourcesNeeded: text(),
-  superviseExternal: one(SUPERVISE_EXTERNAL),
   recommendations: text(),
 });
 export type ContributionValues = z.output<typeof contributionBase>;
-export type ContributionData = z.output<typeof contributionBase>;
+export type ContributionData = ContributionValues;
 
 export const showWorkshops = (v: { workshopIntent: string }) => v.workshopIntent === "YES" || v.workshopIntent === "POSSIBLY";
 export const showProjects = (v: { projectIntent: string }) => v.projectIntent === "YES" || v.projectIntent === "POSSIBLY";
@@ -481,10 +472,14 @@ export const showMentorFields = (v: { mentorCompetitions: string }) => v.mentorC
 
 function contributionFormats(v: ContributionData, ctx: Ctx) {
   v.workshops.forEach((w, i) =>
-    formats(ctx, ["workshops", i], { counts: [["maxParticipants", w.maxParticipants]], short: [["title", w.title]], long: [["description", w.description]] }),
+    formats(ctx, ["workshops", i], { counts: [["maxParticipants", w.maxParticipants]], short: [["title", w.title]], long: [["description", w.description], ["equipment", w.equipment]] }),
   );
   v.projects.forEach((p, i) =>
-    formats(ctx, ["projects", i], { counts: [["studentCount", p.studentCount]], short: [["title", p.title]], long: [["description", p.description], ["problem", p.problem]] }),
+    formats(ctx, ["projects", i], {
+      counts: [["studentCount", p.studentCount]],
+      short: [["title", p.title]],
+      long: [["problem", p.problem], ["expectedOutcomes", p.expectedOutcomes], ["resources", p.resources]],
+    }),
   );
   formats(ctx, [], { long: [["resourcesNeeded", v.resourcesNeeded], ["recommendations", v.recommendations]] });
 }
@@ -514,13 +509,9 @@ function contributionRules(v: ContributionData, ctx: Ctx) {
   if (v.mentorCompetitions === "YES") needSome(ctx, v.mentorFields, ["mentorFields"]);
   needSome(ctx, v.deliveryPreferences, ["deliveryPreferences"]);
   needSome(ctx, v.levels, ["levels"]);
-  need(ctx, v.duration, ["duration"], "selectOne");
   needSome(ctx, v.availability, ["availability"]);
-  need(ctx, v.collaboration, ["collaboration"], "selectOne");
-  need(ctx, v.superviseExternal, ["superviseExternal"], "selectOne");
 }
 
-export const contributionDraft = contributionBase.superRefine(contributionFormats);
 export const contributionSubmit = contributionBase.superRefine((v, ctx) => {
   identityRules(v.identity, ctx);
   contributionFormats(v, ctx);
@@ -531,40 +522,33 @@ export const CONTRIBUTION_STEPS: (keyof ContributionData)[][] = [
   ["identity"],
   ["expertise", "expertiseOther", "supportAreas", "supportAreasOther"],
   ["workshopIntent", "workshops", "projectIntent", "projects", "mentorCompetitions", "mentorFields"],
-  ["deliveryPreferences", "levels", "duration", "availability", "availabilityNote", "collaboration"],
-  ["resourcesNeeded", "superviseExternal", "recommendations"],
+  ["deliveryPreferences", "levels", "availability", "availabilityNote", "resourcesNeeded", "recommendations"],
 ];
 
 export const emptyWorkshop = (): z.output<typeof workshopSchema> => ({
   title: "",
   field: "",
   description: "",
-  objectives: "",
   levels: [],
-  prerequisites: "",
   maxParticipants: "",
   format: "",
   duration: "",
   equipment: "",
-  venue: "",
   period: "",
-  expectedOutcomes: "",
+  attachments: [],
 });
 export const emptyProject = (): z.output<typeof projectSchema> => ({
   title: "",
   field: "",
   problem: "",
-  description: "",
   expectedOutcomes: "",
   requiredFields: [],
-  requiredSkills: "",
   levels: [],
   studentCount: "",
   duration: "",
   resources: "",
   contributionType: "",
-  publicationOptions: "",
-  collaboration: "",
+  attachments: [],
 });
 export const emptyContribution = (): ContributionValues => ({
   identity: emptyIdentity(),
@@ -580,12 +564,9 @@ export const emptyContribution = (): ContributionValues => ({
   mentorFields: [],
   deliveryPreferences: [],
   levels: [],
-  duration: "",
   availability: [],
   availabilityNote: "",
-  collaboration: "",
   resourcesNeeded: "",
-  superviseExternal: "",
   recommendations: "",
 });
 
@@ -600,7 +581,6 @@ export const levelsToForm = (v: string[]) => (ACADEMIC_LEVELS.every((l) => v.inc
 export const dateToDb = (v: string) => (v && isDate(v) ? new Date(`${v}T00:00:00Z`) : null);
 export const dateToForm = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : "");
 export const countToDb = (v: string) => (v && isCount(v) ? Number(v) : null);
-export const countToForm = (n: number | null) => (n == null ? "" : String(n));
 export const orNull = <T extends string>(v: T | "") => (v === "" ? null : v);
 
 /** Issues whose top-level field belongs to the given step. */

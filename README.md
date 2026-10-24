@@ -21,6 +21,12 @@ Staff fill in **open forms**, like the student survey. No account or password is
 
 - **Same details across forms:** every form starts with *Your details* (name, official email, position, department, pathway). The browser remembers them for the next form. The server links all contributions with the same email to one staff profile.
 - **Drafts:** unsent answers are kept on the staff member's own device until submitted.
+- **Short forms:** overlapping questions were merged. Pathway Leaders answer 9 questions, Module Coordinators 7 (plus their activities), and Academic/Technical staff 10.
+- **Attachments:** each opportunity, module, module activity, workshop and project idea can carry up to 5 files (PDF, Word, Excel, PowerPoint, PNG, JPEG; 5 MB each).
+  - Files are stored in the database, so they survive redeploys.
+  - The file type is checked by content signature, not only the name.
+  - Only signed-in administrators can download a file, always as a download, and every download is recorded in the audit log.
+  - Uploads that are never submitted are deleted after 7 days.
 - **Validation:** answers are checked step by step in the browser and again on the server. Submissions are rate-limited per IP and only accepted from this site.
 - **Identity is not verified:** the email is self-declared. If verified identity is required, put the `/staff` routes behind the college's single sign-on or a shared access code.
 

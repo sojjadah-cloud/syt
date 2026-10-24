@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/admin/ui";
 import { CreateInitiativeButton, KV, MatchPanel, ReviewControl, Section2 } from "@/components/admin/engagement-ui";
+import { AttachmentLinks } from "@/components/admin/AttachmentLinks";
+import { attachmentsFor } from "@/lib/attachments";
 import { getAdminI18n } from "@/lib/admin-i18n";
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -22,7 +24,7 @@ export default async function OpportunityPage({ params }: { params: Promise<{ id
   const { e, s, o } = i18n;
   const q = s.pathway.o;
   const join = (xs: string[]) => xs.join(i18n.locale === "ar" ? "، " : ", ");
-  const match = await matchAll(op.requiredFields, op.targetLevels);
+  const [match, files] = await Promise.all([matchAll(op.requiredFields, op.targetLevels), attachmentsFor("OPPORTUNITY", [op.id])]);
 
   return (
     <AdminShell i18n={i18n} adminName={admin.name} active="opportunities">
@@ -67,13 +69,12 @@ export default async function OpportunityPage({ params }: { params: Promise<{ id
               [q.requiredSkills, op.requiredSkills],
               [q.eligibility, op.eligibility],
               [q.preparation, op.preparation],
-              [q.preparationDuration, op.preparationDuration],
               [q.equipment, op.equipment],
-              [q.support, op.supportExpected],
               [q.priority, s.options.priority[op.priority]],
               [q.notes, op.notes],
             ]}
           />
+          <AttachmentLinks label={e.common.attachments} files={files.get(op.id) ?? []} />
         </Section2>
         <MatchPanel i18n={i18n} {...match} hasFields={op.requiredFields.length > 0} />
       </div>

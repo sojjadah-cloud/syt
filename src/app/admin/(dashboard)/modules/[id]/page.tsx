@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/admin/ui";
 import { Badge, CreateInitiativeButton, KV, ReviewControl, Section2 } from "@/components/admin/engagement-ui";
+import { AttachmentLinks } from "@/components/admin/AttachmentLinks";
+import { attachmentsFor } from "@/lib/attachments";
 import { getAdminI18n } from "@/lib/admin-i18n";
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -24,6 +26,7 @@ export default async function ModulePage({ params }: { params: Promise<{ id: str
   if (!m) notFound();
   const { e, s, o } = i18n;
   const q = s.module;
+  const [moduleFiles, activityFiles] = await Promise.all([attachmentsFor("MODULE", [m.id]), attachmentsFor("ACTIVITY", m.activities.map((a) => a.id))]);
   const join = (xs: string[]) => xs.join(i18n.locale === "ar" ? "، " : ", ");
 
   return (
@@ -49,12 +52,12 @@ export default async function ModulePage({ params }: { params: Promise<{ id: str
           <KV
             rows={[
               [q.q4, m.overview],
-              [e.modules.competencies, m.competencies],
               [e.modules.practical, m.hasPractical == null ? "" : m.hasPractical ? `${e.common.yes} — ${m.practicalDetails}` : e.common.no],
               [q.q8, m.canSupportActivity ? s.options.canSupport[m.canSupportActivity] : ""],
               [e.modules.resources, m.resources],
             ]}
           />
+          <AttachmentLinks label={e.common.attachments} files={moduleFiles.get(m.id) ?? []} />
         </Section2>
         <Section2 title={e.modules.outcomes}>
           <ul className="space-y-2 text-[13.5px]">
@@ -79,9 +82,7 @@ export default async function ModulePage({ params }: { params: Promise<{ id: str
             <KV
               rows={[
                 [q.a.description, a.description],
-                [q.a.problem, a.engineeringProblem],
                 [q.a.tasks, a.studentTasks],
-                [q.a.deliverables, a.deliverables],
                 [q.a.format, `${s.options.participation[a.format]}${a.teamSize ? ` · ${a.teamSize}` : ""}`],
                 [q.a.duration, a.duration],
                 [e.modules.linked, join(a.outcomes.map((l) => `${l.outcome.identifier} — ${l.outcome.description}`))],
@@ -92,6 +93,7 @@ export default async function ModulePage({ params }: { params: Promise<{ id: str
                 [e.common.initiatives, a.initiatives.length ? join(a.initiatives.map((x) => x.title)) : ""],
               ]}
             />
+            <AttachmentLinks label={e.common.attachments} files={activityFiles.get(a.id) ?? []} />
             <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-line pt-3">
               <ReviewControl i18n={i18n} kind="activity" id={a.id} status={a.reviewStatus} />
               <CreateInitiativeButton i18n={i18n} source="activity" sourceId={a.id} />

@@ -897,3 +897,30 @@ model InitiativeStatusChange {
 
   @@index([initiativeId, createdAt])
 }
+
+// ---------------------------------------------------------------------------
+// File attachments on staff submissions (kept in the database so they survive
+// redeploys). Uploaded first, then linked to their item when the form is submitted.
+// ---------------------------------------------------------------------------
+
+enum AttachmentKind {
+  OPPORTUNITY
+  MODULE
+  ACTIVITY
+  WORKSHOP
+  PROJECT
+}
+
+model Attachment {
+  id        String          @id @default(cuid())
+  kind      AttachmentKind?
+  parentId  String?
+  fileName  String
+  mimeType  String
+  size      Int
+  data      Bytes
+  createdAt DateTime        @default(now())
+
+  @@index([kind, parentId])
+  @@index([createdAt])
+}

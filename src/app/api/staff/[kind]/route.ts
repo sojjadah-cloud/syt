@@ -18,12 +18,15 @@ const KINDS = {
 const MAX_BODY = 256 * 1024;
 
 /** Staff profiles are matched by email so several contributions link to one person. */
-async function upsertProfile(i: Identity) {
+async function upsertProfile(i: Identity, pathways?: string[]) {
   const data = { fullName: i.fullName, position: i.position, department: i.department };
   return prisma.$transaction(async (tx) => {
     const profile = await tx.staffProfile.upsert({ where: { email: i.email }, create: { email: i.email, ...data }, update: data });
-    await tx.staffPathwayAssignment.deleteMany({ where: { profileId: profile.id } });
-    if (i.pathways.length) await tx.staffPathwayAssignment.createMany({ data: i.pathways.map((pathwayCode) => ({ profileId: profile.id, pathwayCode })) });
+    // A pathway leader's pathways (from their survey) are recorded on their profile.
+    if (pathways?.length) {
+      await tx.staffPathwayAssignment.deleteMany({ where: { profileId: profile.id } });
+      await tx.staffPathwayAssignment.createMany({ data: pathways.map((pathwayCode) => ({ profileId: profile.id, pathwayCode })) });
+    }
     return profile;
   });
 }
@@ -55,9 +58,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ kin
   }
 
   try {
-    const profile = await upsertProfile(parsed.data.identity);
+    const data = parsed.data as { identity: Identity; pathways?: string[] };
+    const profile = await upsertProfile(data.identity, kind === "pathway" ? data.pathways : undefined);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const saved = await cfg.save(profile.id, undefined, parsed.data as any, true, false);
+    const saved = await cfg.save(profile.id, parsed.data as any);
     await audit(null, `staff_${kind}_submitted`, saved.id);
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (e) {

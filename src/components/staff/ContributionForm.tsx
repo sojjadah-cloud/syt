@@ -4,14 +4,11 @@ import { ChoiceField, TextField } from "@/components/survey/fields";
 import {
   ALL_LEVELS,
   AVAILABILITY,
-  COLLABORATION,
   CONTRIBUTION_TYPES,
   DELIVERY_PREFERENCES,
   EXPERTISE_AREAS,
   LEVEL_OPTIONS,
   MENTOR_WILLINGNESS,
-  PREFERRED_DURATIONS,
-  SUPERVISE_EXTERNAL,
   SUPPORT_AREAS,
   WORKSHOP_FORMATS,
   YES_POSSIBLY_NOT,
@@ -28,6 +25,7 @@ import {
   showWorkshops,
   type ContributionValues,
 } from "@/lib/staff-schema";
+import { AttachmentField } from "./AttachmentField";
 import { FieldGrid, When, Wide, labelOf, labelsOf, opts } from "./form-helpers";
 import { Repeater } from "./Repeater";
 import { StaffSurvey, type ReviewRow } from "./StaffSurvey";
@@ -36,14 +34,14 @@ interface Props {
   t: StaffDictionary;
   values: ContributionValues;
   fieldLabels: Record<string, string>;
-  pathwayOptions: { value: string; label: string }[];
 }
 
-export function ContributionForm({ t, values, fieldLabels, pathwayOptions }: Props) {
+const hasOther = (v: string[]) => Array.isArray(v) && v.includes("OTHER");
+
+export function ContributionForm({ t, values, fieldLabels }: Props) {
   const c = t.contribution;
   const o = t.options;
   const expertiseOpts = opts(EXPERTISE_AREAS, o.expertise);
-  const hasOther = (v: string[]) => Array.isArray(v) && v.includes("OTHER");
 
   const renderStep = (step: number) => {
     switch (step) {
@@ -84,22 +82,23 @@ export function ContributionForm({ t, values, fieldLabels, pathwayOptions }: Pro
                       <Wide>
                         <ChoiceField compact name={n("field")} label={c.w.field} columns={3} options={expertiseOpts} />
                       </Wide>
-                      <TextField compact multiline rows={2} name={n("description")} label={c.w.description} />
-                      <TextField compact multiline rows={2} required={false} name={n("objectives")} label={c.w.objectives} />
+                      <Wide>
+                        <TextField compact multiline rows={3} name={n("description")} label={c.w.description} />
+                      </Wide>
                       <Wide>
                         <ChoiceField compact multiple required={false} name={n("levels")} label={c.w.levels} exclusive={ALL_LEVELS} columns={3} options={opts(LEVEL_OPTIONS, o.levels)} />
                       </Wide>
-                      <TextField compact required={false} name={n("prerequisites")} label={c.w.prerequisites} />
-                      <TextField compact required={false} type="number" name={n("maxParticipants")} label={c.w.maxParticipants} />
                       <ChoiceField compact required={false} name={n("format")} label={c.w.format} options={opts(WORKSHOP_FORMATS, o.workshopFormat)} />
                       <div className="space-y-5">
                         <TextField compact required={false} name={n("duration")} label={c.w.duration} />
+                        <TextField compact required={false} type="number" name={n("maxParticipants")} label={c.w.maxParticipants} />
                         <TextField compact required={false} name={n("period")} label={c.w.period} />
                       </div>
-                      <TextField compact required={false} name={n("equipment")} label={c.w.equipment} />
-                      <TextField compact required={false} name={n("venue")} label={c.w.venue} />
                       <Wide>
-                        <TextField compact multiline rows={2} required={false} name={n("expectedOutcomes")} label={c.w.outcomes} />
+                        <TextField compact multiline rows={2} required={false} name={n("equipment")} label={c.w.equipment} />
+                      </Wide>
+                      <Wide>
+                        <AttachmentField name={n("attachments")} t={t} />
                       </Wide>
                     </FieldGrid>
                   );
@@ -127,10 +126,8 @@ export function ContributionForm({ t, values, fieldLabels, pathwayOptions }: Pro
                       <Wide>
                         <ChoiceField compact name={n("field")} label={c.p.field} columns={3} options={expertiseOpts} />
                       </Wide>
-                      <TextField compact multiline rows={2} name={n("problem")} label={c.p.problem} />
-                      <TextField compact multiline rows={2} required={false} name={n("description")} label={c.p.description} />
-                      <TextField compact multiline rows={2} required={false} name={n("expectedOutcomes")} label={c.p.outcomes} />
-                      <TextField compact multiline rows={2} required={false} name={n("resources")} label={c.p.resources} />
+                      <TextField compact multiline rows={3} name={n("problem")} label={c.p.problem} />
+                      <TextField compact multiline rows={3} required={false} name={n("expectedOutcomes")} label={c.p.outcomes} />
                       <Wide>
                         <ChoiceField
                           compact
@@ -144,18 +141,15 @@ export function ContributionForm({ t, values, fieldLabels, pathwayOptions }: Pro
                         />
                       </Wide>
                       <Wide>
-                        <TextField compact required={false} name={n("requiredSkills")} label={c.p.requiredSkills} />
-                      </Wide>
-                      <Wide>
                         <ChoiceField compact multiple required={false} name={n("levels")} label={c.p.levels} exclusive={ALL_LEVELS} columns={3} options={opts(LEVEL_OPTIONS, o.levels)} />
                       </Wide>
                       <TextField compact required={false} type="number" name={n("studentCount")} label={c.p.studentCount} />
                       <TextField compact required={false} name={n("duration")} label={c.p.duration} />
+                      <TextField compact multiline rows={2} required={false} name={n("resources")} label={c.p.resources} />
                       <ChoiceField compact required={false} name={n("contributionType")} label={c.p.contributionType} options={opts(CONTRIBUTION_TYPES, o.contributionType)} />
-                      <div className="space-y-5">
-                        <TextField compact multiline rows={2} required={false} name={n("publicationOptions")} label={c.p.publication} />
-                        <TextField compact multiline rows={2} required={false} name={n("collaboration")} label={c.p.collaboration} />
-                      </div>
+                      <Wide>
+                        <AttachmentField name={n("attachments")} t={t} />
+                      </Wide>
                     </FieldGrid>
                   );
                 }}
@@ -167,23 +161,15 @@ export function ContributionForm({ t, values, fieldLabels, pathwayOptions }: Pro
             </When>
           </>
         );
-      case 2:
+      default:
         return (
           <>
             <ChoiceField multiple name="deliveryPreferences" number={6} label={c.q6} options={opts(DELIVERY_PREFERENCES, o.delivery)} />
             <ChoiceField multiple name="levels" number={7} label={c.q7} exclusive={ALL_LEVELS} columns={3} options={opts(LEVEL_OPTIONS, o.levels)} />
-            <ChoiceField name="duration" number={8} label={c.q8} columns={3} options={opts(PREFERRED_DURATIONS, o.duration)} />
-            <ChoiceField multiple name="availability" number={9} label={c.q9} options={opts(AVAILABILITY, o.availability)} />
+            <ChoiceField multiple name="availability" number={8} label={c.q9} options={opts(AVAILABILITY, o.availability)} />
             <TextField compact required={false} name="availabilityNote" label={c.q9Note} />
-            <ChoiceField name="collaboration" number={10} label={c.q10} options={opts(COLLABORATION, o.collaboration)} />
-          </>
-        );
-      default:
-        return (
-          <>
-            <TextField multiline required={false} name="resourcesNeeded" number={11} label={c.q11} />
-            <ChoiceField name="superviseExternal" number={12} label={c.q12} options={opts(SUPERVISE_EXTERNAL, o.superviseExternal)} />
-            <TextField multiline required={false} name="recommendations" number={13} label={c.q13} />
+            <TextField multiline rows={3} required={false} name="resourcesNeeded" number={9} label={c.q11} />
+            <TextField multiline rows={3} required={false} name="recommendations" number={10} label={c.q13} />
           </>
         );
     }
@@ -192,6 +178,7 @@ export function ContributionForm({ t, values, fieldLabels, pathwayOptions }: Pro
   const review = (v: ContributionValues): ReviewRow[][] => {
     const withOther = (vals: string[], labels: Record<string, string>, other: string) =>
       labelsOf(vals, labels).map((l, i) => (vals[i] === "OTHER" && other ? `${l}: ${other}` : l));
+    const files = (n: number) => (n ? ` · ${t.attachments.label}: ${n}` : "");
     return [
       [
         { label: c.q1, value: withOther(v.expertise, o.expertise, v.expertiseOther) },
@@ -199,21 +186,20 @@ export function ContributionForm({ t, values, fieldLabels, pathwayOptions }: Pro
       ],
       [
         { label: c.q3, value: labelOf(v.workshopIntent, o.yesPossiblyNot) },
-        ...(showWorkshops(v) ? [{ label: c.workshop, value: v.workshops.map((w) => `${w.title || t.common.untitled} — ${labelOf(w.field, o.expertise)}`) }] : []),
+        ...(showWorkshops(v)
+          ? [{ label: c.workshop, value: v.workshops.map((w) => `${w.title || t.common.untitled} — ${labelOf(w.field, o.expertise)}${files(w.attachments.length)}`) }]
+          : []),
         { label: c.q4, value: labelOf(v.projectIntent, o.yesPossiblyNot) },
-        ...(showProjects(v) ? [{ label: c.project, value: v.projects.map((p) => `${p.title || t.common.untitled} — ${labelOf(p.field, o.expertise)}`) }] : []),
+        ...(showProjects(v)
+          ? [{ label: c.project, value: v.projects.map((p) => `${p.title || t.common.untitled} — ${labelOf(p.field, o.expertise)}${files(p.attachments.length)}`) }]
+          : []),
         { label: c.q5, value: [labelOf(v.mentorCompetitions, o.mentor), ...(showMentorFields(v) ? labelsOf(v.mentorFields, o.expertise) : [])].filter(Boolean) },
       ],
       [
         { label: c.q6, value: labelsOf(v.deliveryPreferences, o.delivery) },
         { label: c.q7, value: labelsOf(v.levels, o.levels) },
-        { label: c.q8, value: labelOf(v.duration, o.duration) },
         { label: c.q9, value: [...labelsOf(v.availability, o.availability), ...(v.availabilityNote ? [v.availabilityNote] : [])] },
-        { label: c.q10, value: labelOf(v.collaboration, o.collaboration) },
-      ],
-      [
         { label: c.q11, value: v.resourcesNeeded },
-        { label: c.q12, value: labelOf(v.superviseExternal, o.superviseExternal) },
         { label: c.q13, value: v.recommendations },
       ],
     ];
@@ -224,14 +210,13 @@ export function ContributionForm({ t, values, fieldLabels, pathwayOptions }: Pro
       kind="contribution"
       t={t}
       title={c.title}
-      steps={c.steps}
+      steps={[c.steps[0], c.steps[1], { title: c.steps[2].title, description: c.steps[2].description }]}
       stepFields={CONTRIBUTION_STEPS as string[][]}
       repeaters={["workshops", "projects"]}
       schema={contributionSubmit}
       defaultValues={values}
       renderStep={renderStep}
       review={review}
-      pathwayOptions={pathwayOptions}
     />
   );
 }

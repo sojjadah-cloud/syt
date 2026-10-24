@@ -192,3 +192,18 @@ export function fieldsForExpertise(area: ExpertiseArea): TechnicalField[] {
 }
 
 export const STAFF_LIMITS = { short: 200, medium: 1000, long: 4000, url: 500, items: 30 } as const;
+
+/** File attachments on staff submissions (stored in the database; downloadable by administrators only). */
+export const ATTACHMENT_LIMITS = { maxBytes: 5 * 1024 * 1024, perItem: 5 } as const;
+export const ATTACHMENT_TYPES: Record<string, { ext: string[]; label: string }> = {
+  "application/pdf": { ext: ["pdf"], label: "PDF" },
+  "application/msword": { ext: ["doc"], label: "Word" },
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": { ext: ["docx"], label: "Word" },
+  "application/vnd.ms-excel": { ext: ["xls"], label: "Excel" },
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": { ext: ["xlsx"], label: "Excel" },
+  "application/vnd.ms-powerpoint": { ext: ["ppt"], label: "PowerPoint" },
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation": { ext: ["pptx"], label: "PowerPoint" },
+  "image/png": { ext: ["png"], label: "PNG" },
+  "image/jpeg": { ext: ["jpg", "jpeg"], label: "JPEG" },
+};
+export const ATTACHMENT_ACCEPT = Object.values(ATTACHMENT_TYPES).flatMap((t) => t.ext.map((e) => `.${e}`)).join(",");

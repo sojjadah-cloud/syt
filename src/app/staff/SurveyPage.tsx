@@ -22,9 +22,9 @@ export async function SurveyPage({ kind }: { kind: SurveyKind }) {
       {kind === "pathway" ? (
         <PathwayForm t={t} values={emptyPathway()} pathwayOptions={pathwayOptions} fieldLabels={fieldLabels} />
       ) : kind === "module" ? (
-        <ModuleForm t={t} values={emptyModule()} pathwayOptions={pathwayOptions} />
+        <ModuleForm t={t} values={emptyModule()} />
       ) : (
-        <ContributionForm t={t} values={emptyContribution()} fieldLabels={fieldLabels} pathwayOptions={pathwayOptions} />
+        <ContributionForm t={t} values={emptyContribution()} fieldLabels={fieldLabels} />
       )}
     </StaffShell>
   );

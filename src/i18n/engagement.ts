@@ -70,6 +70,7 @@ const en = {
     no: "No",
     notSpecified: "Not specified",
     draftsHidden: "Drafts are not shown; only submitted surveys appear here.",
+    attachments: "Attached files",
   },
   accounts: {
     title: "Administrator accounts",
@@ -324,6 +325,7 @@ const ar: EngagementDictionary = {
     no: "لا",
     notSpecified: "غير محدد",
     draftsHidden: "لا تظهر المسودات؛ تظهر هنا الاستبيانات المُرسلة فقط.",
+    attachments: "الملفات المرفقة",
   },
   accounts: {
     title: "حسابات المسؤولين",

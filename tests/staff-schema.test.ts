@@ -3,7 +3,6 @@ import {
   CONTRIBUTION_STEPS,
   MODULE_STEPS,
   PATHWAY_STEPS,
-  contributionDraft,
   contributionSubmit,
   emptyActivity,
   emptyContribution,
@@ -16,7 +15,6 @@ import {
   levelsToDb,
   levelsToForm,
   moduleSubmit,
-  pathwayDraft,
   pathwaySubmit,
 } from "@/lib/staff-schema";
 import { STAFF_DICTS } from "@/i18n/staff";
@@ -24,74 +22,74 @@ import { STAFF_DICTS } from "@/i18n/staff";
 const errs = (r: { success: boolean; error?: { issues: { path: PropertyKey[]; message: string }[] } }) =>
   Object.fromEntries((r.error?.issues ?? []).map((i) => [i.path.join("."), i.message]).reverse());
 
-const identity = { fullName: "Dr Test Staff", email: "Test.Staff@MTC.edu.om", position: "Lecturer", department: "Systems Engineering", pathways: ["COMPUTER"] };
+const identity = { fullName: "Dr Test Staff", email: "Test.Staff@MTC.edu.om", position: "Lecturer", department: "Systems Engineering" };
+const file = { id: "cmfile0000000000000000001", name: "brochure.pdf", size: 1200 };
 
 const validPathway = () => ({
-  ...emptyPathway(["COMPUTER"]),
+  ...emptyPathway(),
   identity,
+  pathways: ["COMPUTER"],
   competencies: "Embedded programming and teamwork",
   activityTypes: ["ENGINEERING_COMPETITIONS"],
   knowsCompetitions: "YES",
-  knowsOtherOpportunities: "NO",
-  opportunities: [{ ...emptyOpportunity(), name: "Robotics Challenge", requiredFields: ["ROBOTICS", "EMBEDDED_IOT"] }],
-  targetLevels: ["ALL"],
-  preparationSkills: "C programming",
+  opportunities: [{ ...emptyOpportunity(), name: "Robotics Challenge", targetLevels: ["ALL"], requiredFields: ["ROBOTICS", "EMBEDDED_IOT"], attachments: [file] }],
   preparationMethods: ["SPECIALISED_WORKSHOPS"],
   challenges: ["PREPARATION_TIME"],
-  recommendations: [{ name: "Internal robotics cup", description: "", benefit: "", priority: "HIGH", period: "Spring" }],
+  recommendations: [{ name: "Internal robotics cup", description: "", priority: "HIGH", period: "Spring" }],
 });
 
 describe("staff surveys — pathway leaders", () => {
   it("accepts a complete submission and normalises it", () => {
     const r = pathwaySubmit.safeParse(validPathway());
     expect(errs(r)).toEqual({});
-    expect(r.success && levelsToDb(r.data.targetLevels)).toEqual(["LEVEL_3", "LEVEL_4", "LEVEL_5", "LEVEL_6"]);
+    if (!r.success) return;
+    expect(levelsToDb(r.data.opportunities[0].targetLevels)).toEqual(["LEVEL_3", "LEVEL_4", "LEVEL_5", "LEVEL_6"]);
+    expect(r.data.identity.email).toBe("test.staff@mtc.edu.om");
+    expect(r.data.opportunities[0].attachments).toEqual([file]);
   });
 
-  it("allows an incomplete draft but not an incomplete submission", () => {
-    expect(pathwayDraft.safeParse(emptyPathway()).success).toBe(true);
+  it("rejects an incomplete submission with field messages", () => {
     const e = errs(pathwaySubmit.safeParse(emptyPathway()));
-    expect(e).toMatchObject({ pathways: "selectAtLeastOne", competencies: "required", knowsCompetitions: "selectOne" });
+    expect(e).toMatchObject({ "identity.fullName": "required", pathways: "selectAtLeastOne", competencies: "required", knowsCompetitions: "selectOne" });
   });
 
-  it("requires at least one opportunity only when the leader answered Yes", () => {
+  it("asks one opportunities question; opportunities are required only after Yes", () => {
     expect(errs(pathwaySubmit.safeParse({ ...validPathway(), opportunities: [] })).opportunities).toBe("needOpportunity");
-    const notNeeded = { ...validPathway(), knowsCompetitions: "NOT_CURRENTLY", opportunities: [] };
-    expect(errs(pathwaySubmit.safeParse(notNeeded)).opportunities).toBeUndefined();
+    expect(errs(pathwaySubmit.safeParse({ ...validPathway(), knowsCompetitions: "NOT_CURRENTLY", opportunities: [] })).opportunities).toBeUndefined();
   });
 
-  it("validates opportunity formats even in drafts, and leaves unknown details empty", () => {
+  it("validates opportunity formats and leaves unknown details empty", () => {
     const bad = { ...validPathway(), opportunities: [{ ...emptyOpportunity(), name: "X", url: "not a link", expectedDate: "2026-13-45", teamSize: "five" }] };
-    const e = errs(pathwayDraft.safeParse(bad));
+    const e = errs(pathwaySubmit.safeParse(bad));
     expect(e["opportunities.0.url"]).toBe("url");
     expect(e["opportunities.0.expectedDate"]).toBe("date");
     expect(e["opportunities.0.teamSize"]).toBe("number");
-    expect(pathwaySubmit.safeParse(validPathway()).success).toBe(true); // blank url/dates are fine
   });
 
-  it("drops option values that are not on the approved lists", () => {
-    const r = pathwayDraft.safeParse({ ...validPathway(), pathways: ["COMPUTER", "HACKED"], activityTypes: ["NOPE", "HACKATHONS"] });
+  it("drops option values and attachment ids that are not valid", () => {
+    const r = pathwaySubmit.safeParse({
+      ...validPathway(),
+      pathways: ["COMPUTER", "HACKED"],
+      activityTypes: ["NOPE", "HACKATHONS"],
+      opportunities: [{ ...validPathway().opportunities[0], attachments: [file, { id: "../../etc/passwd", name: "x", size: 1 }] }],
+    });
     expect(r.success && r.data.pathways).toEqual(["COMPUTER"]);
     expect(r.success && r.data.activityTypes).toEqual(["HACKATHONS"]);
+    expect(r.success && r.data.opportunities[0].attachments).toEqual([file]);
   });
 
-  it("requires staff details and normalises the email", () => {
+  it("limits recommendations to three and requires staff details", () => {
+    const four = Array.from({ length: 4 }, (_, i) => ({ name: `R${i}`, description: "", priority: "LOW", period: "" }));
+    expect(errs(pathwaySubmit.safeParse({ ...validPathway(), recommendations: four })).recommendations).toBe("maxThree");
     const e = errs(pathwaySubmit.safeParse({ ...validPathway(), identity: { ...identity, email: "not-an-email", position: "" } }));
     expect(e["identity.email"]).toBe("email");
     expect(e["identity.position"]).toBe("required");
-    const r = pathwaySubmit.safeParse(validPathway());
-    expect(r.success && r.data.identity.email).toBe("test.staff@mtc.edu.om");
-  });
-
-  it("limits recommendations to three", () => {
-    const four = Array.from({ length: 4 }, (_, i) => ({ name: `R${i}`, description: "", benefit: "", priority: "LOW", period: "" }));
-    expect(errs(pathwaySubmit.safeParse({ ...validPathway(), recommendations: four })).recommendations).toBe("maxThree");
   });
 
   it("filters issues to the current step", () => {
     const r = pathwaySubmit.safeParse(emptyPathway());
-    const step0 = issuesForStep(r.error!.issues, PATHWAY_STEPS[1] as string[]).map((i) => i.path[0]);
-    expect(new Set(step0)).toEqual(new Set(["pathways", "competencies", "activityTypes"]));
+    const step = issuesForStep(r.error!.issues, PATHWAY_STEPS[1] as string[]).map((i) => i.path[0]);
+    expect(new Set(step)).toEqual(new Set(["pathways", "competencies", "activityTypes"]));
   });
 });
 
@@ -105,7 +103,6 @@ describe("staff surveys — module coordinators", () => {
     semester: "SEMESTER_1",
     overview: "Microcontrollers",
     outcomes: [{ key: "outcome-1", identifier: "LO1", description: "Design an embedded controller", category: "" }],
-    competencies: "Firmware",
     hasPractical: "NO",
     canSupportActivity: "YES",
     activities: [
@@ -119,13 +116,10 @@ describe("staff surveys — module coordinators", () => {
     expect(r.success && r.data.moduleCode).toBe("SE3101");
   });
 
-  it("requires practical details only when the module has practical work, and activities when it can support them", () => {
+  it("requires practical details only when there is practical work, and activities when the module can support them", () => {
     expect(errs(moduleSubmit.safeParse({ ...valid(), hasPractical: "YES" })).practicalDetails).toBe("required");
     expect(errs(moduleSubmit.safeParse({ ...valid(), activities: [] })).activities).toBe("needActivity");
     expect(errs(moduleSubmit.safeParse({ ...valid(), canSupportActivity: "NOT_CURRENTLY", activities: [] })).activities).toBeUndefined();
-  });
-
-  it("requires approved learning outcomes", () => {
     expect(errs(moduleSubmit.safeParse({ ...valid(), outcomes: [] })).outcomes).toBe("needOutcome");
   });
 
@@ -142,17 +136,14 @@ describe("staff surveys — contributions", () => {
     expertise: ["ROBOTICS"],
     supportAreas: ["TECHNICAL_WORKSHOPS"],
     workshopIntent: "YES",
-    workshops: [{ ...emptyWorkshop(), title: "ROS basics", field: "ROBOTICS", description: "Intro" }],
+    workshops: [{ ...emptyWorkshop(), title: "ROS basics", field: "ROBOTICS", description: "Intro", attachments: [file] }],
     projectIntent: "POSSIBLY",
     projects: [{ ...emptyProject(), title: "Rover", field: "ROBOTICS", problem: "Navigation" }],
     mentorCompetitions: "YES",
     mentorFields: ["ROBOTICS"],
     deliveryPreferences: ["LAB_WORKSHOPS"],
     levels: ["LEVEL_4"],
-    duration: "FLEXIBLE",
     availability: ["PRIOR_ARRANGEMENT"],
-    collaboration: "NO_PREFERENCE",
-    superviseExternal: "DEPENDS_TOPIC",
   });
 
   it("accepts a complete contribution", () => {
@@ -165,13 +156,19 @@ describe("staff surveys — contributions", () => {
     expect(errs(contributionSubmit.safeParse({ ...valid(), mentorFields: [] })).mentorFields).toBe("selectAtLeastOne");
   });
 
-  it("drafts save while incomplete", () => {
-    expect(contributionDraft.safeParse(emptyContribution()).success).toBe(true);
-  });
-
   it("has four steps covering every field", () => {
     expect(CONTRIBUTION_STEPS.flat().sort()).toEqual(Object.keys(emptyContribution()).sort());
     expect(PATHWAY_STEPS.flat().sort()).toEqual(Object.keys(emptyPathway()).sort());
+  });
+});
+
+describe("question counts (shortened forms)", () => {
+  it("keeps the forms short", () => {
+    // Fields shown to the user, excluding conditional "other"/detail boxes.
+    expect(Object.keys(emptyPathway()).length).toBeLessThanOrEqual(15);
+    expect(Object.keys(emptyModule()).length).toBeLessThanOrEqual(12);
+    expect(Object.keys(emptyContribution()).length).toBeLessThanOrEqual(17);
+    expect(Object.keys(emptyOpportunity()).length).toBeLessThanOrEqual(18);
   });
 });
 

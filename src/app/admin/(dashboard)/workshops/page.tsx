@@ -4,6 +4,8 @@ import { AdminShell, PageHeader } from "@/components/admin/ui";
 import { Badge, CreateInitiativeButton, ExportLinks, FilterBar, ReviewControl, toOpts } from "@/components/admin/engagement-ui";
 import { EXPERTISE_AREAS, REVIEW_STATUSES, WORKSHOP_FORMATS } from "@/config/staff";
 import { ACADEMIC_LEVELS } from "@/config/survey";
+import { AttachmentLinks } from "@/components/admin/AttachmentLinks";
+import { attachmentsFor } from "@/lib/attachments";
 import { getAdminI18n } from "@/lib/admin-i18n";
 import { params, type RawParams } from "@/lib/admin-params";
 import { requireAdmin } from "@/lib/auth";
@@ -23,6 +25,7 @@ export default async function WorkshopsPage({ searchParams }: { searchParams: Pr
     include: { survey: { select: { profile: { select: { id: true, fullName: true } } } }, _count: { select: { initiatives: true } } },
     take: 300,
   });
+  const files = await attachmentsFor("WORKSHOP", rows.map((r) => r.id));
 
   return (
     <AdminShell i18n={i18n} adminName={admin.name} active="workshops">
@@ -81,6 +84,7 @@ export default async function WorkshopsPage({ searchParams }: { searchParams: Pr
                     </div>
                   ))}
               </dl>
+              <AttachmentLinks label={e.common.attachments} files={files.get(r.id) ?? []} />
               <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-line pt-3">
                 <ReviewControl i18n={i18n} kind="workshop" id={r.id} status={r.reviewStatus} />
                 <CreateInitiativeButton i18n={i18n} source="workshop" sourceId={r.id} />

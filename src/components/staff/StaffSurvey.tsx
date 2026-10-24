@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FormProvider, useForm, useFormContext, type FieldValues } from "react-hook-form";
 import type { z } from "zod";
-import { ChoiceField, FormTextProvider, TextField, type FormText } from "@/components/survey/fields";
+import { FormTextProvider, TextField, type FormText } from "@/components/survey/fields";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { format } from "@/i18n/format";
@@ -28,7 +28,6 @@ interface Props<V extends FieldValues> {
   repeaters: string[];
   schema: z.ZodType;
   defaultValues: V;
-  pathwayOptions: { value: string; label: string }[];
   /** Renders the survey's own step (0-based, excluding "Your details"). */
   renderStep: (step: number) => React.ReactNode;
   review: (values: V) => ReviewRow[][];
@@ -55,7 +54,7 @@ const store = {
   },
 };
 
-function IdentityStep({ t, pathwayOptions }: { t: StaffDictionary; pathwayOptions: { value: string; label: string }[] }) {
+function IdentityStep({ t }: { t: StaffDictionary }) {
   const p = t.profile;
   return (
     <>
@@ -65,7 +64,6 @@ function IdentityStep({ t, pathwayOptions }: { t: StaffDictionary; pathwayOption
         <TextField name="identity.position" label={p.position} placeholder={p.positionPlaceholder} autoComplete="organization-title" />
         <TextField name="identity.department" label={p.department} />
       </div>
-      <ChoiceField multiple searchable required={false} name="identity.pathways" label={p.pathways} hint={p.pathwaysHint} options={pathwayOptions} />
     </>
   );
 }
@@ -301,7 +299,6 @@ export function StaffSurvey<V extends FieldValues>(props: Props<V>) {
       { label: t.profile.email, value: i.email },
       { label: t.profile.position, value: i.position },
       { label: t.profile.department, value: i.department },
-      { label: t.profile.pathways, value: i.pathways.map((c) => props.pathwayOptions.find((o) => o.value === c)?.label ?? c) },
     ];
   };
 
@@ -341,7 +338,7 @@ export function StaffSurvey<V extends FieldValues>(props: Props<V>) {
                 <ReviewList sections={[identityRows(getValues()), ...review(getValues())]} steps={steps} t={t} onEdit={goTo} />
               ) : step === 0 ? (
                 <div className="space-y-8">
-                  <IdentityStep t={t} pathwayOptions={props.pathwayOptions} />
+                  <IdentityStep t={t} />
                 </div>
               ) : (
                 <div className="space-y-8">{renderStep(step - 1)}</div>

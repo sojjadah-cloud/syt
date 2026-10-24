@@ -171,7 +171,7 @@ export function Section2({ title, children, action }: { title: string; children:
 export function KV({ rows }: { rows: [string, React.ReactNode][] }) {
   return (
     <dl className="divide-y divide-line">
-      {rows.map(([k, v]) => (
+      {rows.filter(([, v]) => v !== "" && v != null).map(([k, v]) => (
         <div key={k} className="grid gap-1 py-2.5 first:pt-0 last:pb-0 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] md:gap-6">
           <dt className="text-[13px] text-muted">{k}</dt>
           <dd className="whitespace-pre-line break-words text-[14px]">{v === "" || v == null ? <span className="text-muted">—</span> : v}</dd>
