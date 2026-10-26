@@ -37,6 +37,40 @@ const en = {
       },
     },
   },
+  intro: {
+    pathway: {
+      role: "Pathway Leader",
+      title: "Thank you for leading your pathway",
+      body: [
+        "Thank you for your leadership of your academic pathway and for the dedication you show every day in developing our students.",
+        "Your knowledge of your field — its competitions, research and opportunities — opens new doors for students and prepares them to represent the College with distinction.",
+        "This short form gathers your recommendations so the department can turn them into a clear scientific plan for the coming year.",
+      ],
+    },
+    module: {
+      role: "TNA Module Coordinator",
+      title: "Thank you for your work on your module",
+      body: [
+        "Thank you for your continued efforts in coordinating your module and for the care you give to its learning outcomes and practical activities.",
+        "Your experience in linking teaching with real engineering practice is what makes our students' learning meaningful.",
+        "This form collects your ideas for practical projects, challenges and competitions connected to your module.",
+      ],
+    },
+    contribution: {
+      role: "Academic & Technical Staff",
+      title: "Thank you for your contributions",
+      body: [
+        "Thank you for your commitment to our students beyond the classroom.",
+        "Whether through workshops, supervision, mentoring or technical support, your expertise and generosity make a lasting difference to their development.",
+        "This form records how you would like to contribute, so the department can plan and support your efforts.",
+      ],
+    },
+    signature: "With sincere appreciation,",
+    department: "Systems Engineering Department",
+    time: "Takes about 5–10 minutes.",
+    start: "Start the form",
+    resume: "Continue where you left off",
+  },
   attachments: {
     label: "Attachments",
     hint: "PDF, Word, Excel, PowerPoint or images · up to 5 MB each · max 5 files.",
@@ -532,6 +566,40 @@ const ar: StaffDictionary = {
         description: "ساهم من خلال الإشراف البحثي ومشاريع الطلبة والورش التقنية والإرشاد والتأهيل للمسابقات.",
       },
     },
+  },
+  intro: {
+    pathway: {
+      role: "مسؤول المسار الأكاديمي",
+      title: "شكراً لقيادتكم لمساركم الأكاديمي",
+      body: [
+        "نتقدم إليكم بخالص الشكر والتقدير على قيادتكم للمسار الأكاديمي، وعلى حرصكم الدائم على تطوير طلبتنا.",
+        "إن معرفتكم العميقة بمجالكم وبما يرتبط به من مسابقات وبحوث وفرص تفتح آفاقاً جديدة أمام الطلبة، وتُعدّهم لتمثيل الكلية بتميّز.",
+        "يجمع هذا النموذج القصير توصياتكم ليحوّلها القسم إلى خطة علمية واضحة للعام القادم.",
+      ],
+    },
+    module: {
+      role: "منسق مادة TNA",
+      title: "شكراً لجهودكم في تنسيق المادة",
+      body: [
+        "نتقدم إليكم بخالص الشكر والتقدير على جهودكم المتواصلة في تنسيق المادة، وعنايتكم بمخرجات تعلّمها وأنشطتها التطبيقية.",
+        "إن خبرتكم في ربط التدريس بالممارسة الهندسية الحقيقية هي ما يمنح تعلّم طلبتنا قيمته ومعناه.",
+        "يجمع هذا النموذج أفكاركم للمشاريع والتحديات والمسابقات التطبيقية المرتبطة بمادتكم.",
+      ],
+    },
+    contribution: {
+      role: "الهيئة الأكاديمية والفنية",
+      title: "شكراً لعطائكم ومساهماتكم",
+      body: [
+        "نتقدم إليكم بخالص الشكر والتقدير على عطائكم لطلبتنا خارج قاعات الدراسة.",
+        "فسواء من خلال الورش أو الإشراف أو الإرشاد أو الدعم الفني، تترك خبرتكم وسخاؤكم أثراً دائماً في تطورهم.",
+        "يسجّل هذا النموذج الطريقة التي تفضّلون المساهمة بها، ليتمكن القسم من تخطيط جهودكم ودعمها.",
+      ],
+    },
+    signature: "مع خالص التقدير،",
+    department: "قسم هندسة النظم",
+    time: "يستغرق حوالي 5–10 دقائق.",
+    start: "ابدأ التعبئة",
+    resume: "متابعة التعبئة من حيث توقفت",
   },
   attachments: {
     label: "المرفقات",

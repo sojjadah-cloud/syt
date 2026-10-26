@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { format } from "@/i18n/format";
 import type { StaffDictionary } from "@/i18n/staff";
 import { emptyIdentity, issuesForStep, type Identity } from "@/lib/staff-schema";
+import { ThankYouIntro } from "./ThankYouIntro";
 import { cn } from "@/lib/utils";
 
 export type SurveyKind = "pathway" | "module" | "contribution";
@@ -82,6 +83,9 @@ export function StaffSurvey<V extends FieldValues>(props: Props<V>) {
   const [message, setMessage] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [ready, setReady] = useState(false);
+  // The thank-you message is shown first; the form opens when the person presses the button.
+  const [started, setStarted] = useState(false);
+  const [hasDraft, setHasDraft] = useState(false);
   const attempted = useRef(new Set<number>());
   const inFlight = useRef(false);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -105,6 +109,7 @@ export function StaffSurvey<V extends FieldValues>(props: Props<V>) {
     const draft = store.get<{ values: V; step: number; maxReached: number }>(draftKey(kind));
     const identity = store.get<Identity>(IDENTITY_KEY);
     if (draft?.values) {
+      setHasDraft(true);
       reset({ ...defaultValues, ...draft.values } as never);
       setStep(Math.min(draft.step ?? 0, REVIEW));
       setMaxReached(Math.min(draft.maxReached ?? 0, REVIEW));
@@ -266,6 +271,20 @@ export function StaffSurvey<V extends FieldValues>(props: Props<V>) {
       })}
     </ol>
   );
+
+  if (!started && !done) {
+    return (
+      <ThankYouIntro
+        t={t}
+        kind={kind}
+        resume={hasDraft}
+        onStart={() => {
+          setStarted(true);
+          window.scrollTo({ top: 0 });
+        }}
+      />
+    );
+  }
 
   if (done) {
     return (
