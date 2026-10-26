@@ -119,7 +119,7 @@ There is deliberately **no public admin registration**. Accounts can only be cre
 
 4. **Manual Deploy → Deploy latest commit.** The survey is at `/` and the staff dashboard at `/admin`.
 
-**First-load delay.** Free Render instances spin down after 15 minutes without traffic, and the next visit then waits about 50 seconds.
+**First-load delay.** The web service now runs on Render's Starter instance (set in `render.yaml`), which never sleeps. On the free instance, Render spin down after 15 minutes without traffic, and the next visit then waits about 50 seconds.
 - The workflow `.github/workflows/keep-alive.yml` pings `/api/health` every 10 minutes so the service stays awake. One always-on service fits within the free 750 instance-hours per month.
 - If the service URL changes, set the repository variable `APP_URL` (Settings → Secrets and variables → Actions → Variables).
 - GitHub may delay scheduled runs and pauses them after 60 days without repository activity. For a guaranteed instant load, use Render's **Starter** instance, which never sleeps, or add an external uptime monitor that hits `/api/health` every 5 minutes.

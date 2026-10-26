@@ -12,7 +12,7 @@ services:
     name: mtc-se-survey
     runtime: docker
     dockerfilePath: ./Dockerfile
-    plan: free
+    plan: starter # $7/month — never spins down, so pages open immediately
     region: frankfurt
     branch: main
     autoDeploy: true
