@@ -39,7 +39,23 @@ interface Props<V extends FieldValues> {
 type Issue = { path: PropertyKey[]; message: string };
 
 const IDENTITY_KEY = "se-staff:identity";
-const draftKey = (kind: SurveyKind) => `se-staff:draft:${kind}`;
+/**
+ * Bump DRAFT_VERSION whenever the form questions change: drafts saved by an earlier
+ * version are deleted on load, so everyone starts from a clean form.
+ */
+const DRAFT_VERSION = 2;
+const draftKey = (kind: SurveyKind) => `se-staff:draft:v${DRAFT_VERSION}:${kind}`;
+
+/** Removes every staff draft stored by older versions of the forms on this device. */
+function purgeOldDrafts() {
+  try {
+    const current = `se-staff:draft:v${DRAFT_VERSION}:`;
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k?.startsWith("se-staff:draft:") && !k.startsWith(current)) localStorage.removeItem(k);
+    }
+  } catch {}
+}
 const store = {
   get<T>(k: string): T | null {
     try {
@@ -108,6 +124,7 @@ export function StaffSurvey<V extends FieldValues>(props: Props<V>) {
 
   // Restore an unsent draft (this device) and the remembered staff details.
   useEffect(() => {
+    purgeOldDrafts();
     const draft = store.get<{ values: V; step: number; maxReached: number }>(draftKey(kind));
     const identity = store.get<Identity>(IDENTITY_KEY);
     if (draft?.values) {
