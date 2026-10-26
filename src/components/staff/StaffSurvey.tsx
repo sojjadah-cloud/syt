@@ -95,6 +95,7 @@ export function StaffSurvey<V extends FieldValues>(props: Props<V>) {
       selectAll: t.common.selectAll,
       search: t.common.search,
       errors: t.errors,
+      collapseOptional: true,
     }),
     [t],
   );

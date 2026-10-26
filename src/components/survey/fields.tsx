@@ -1,7 +1,7 @@
 "use client";
 
-import { createContext, useContext, useId, useState } from "react";
-import { Controller, get, useFormContext, useFormState } from "react-hook-form";
+import { createContext, useContext, useEffect, useId, useRef, useState } from "react";
+import { Controller, get, useFormContext, useFormState, useWatch } from "react-hook-form";
 import { Input, NativeSelect, Textarea } from "@/components/ui/input";
 import { useOptionalI18n } from "@/i18n/context";
 import { format } from "@/i18n/format";
@@ -20,6 +20,8 @@ export interface FormText {
   selectAll: string;
   search: string;
   errors: Record<string, string>;
+  /** Show optional questions as a small "+ label" link until the person chooses to answer. */
+  collapseOptional?: boolean;
 }
 
 const FormTextContext = createContext<FormText | null>(null);
@@ -122,6 +124,55 @@ export function FieldShell({ number, label, required, hint, error, ids, group, c
   );
 }
 
+/**
+ * Optional questions stay collapsed (just a "+ label" link) while empty, so forms look less crowded.
+ * They open on click, and stay open once they have an answer (e.g. a restored draft).
+ */
+function useReveal(name: string, required: boolean) {
+  const text = useFormText();
+  const value = useWatch({ name });
+  const [open, setOpen] = useState(false);
+  const opened = useRef(false);
+  const empty = Array.isArray(value) ? value.length === 0 : !value;
+  const collapsed = !!text.collapseOptional && !required && empty && !open;
+  return {
+    collapsed,
+    open: () => {
+      opened.current = true;
+      setOpen(true);
+    },
+    justOpened: opened,
+  };
+}
+
+function RevealLink({ label, onOpen }: { label: string; onOpen: () => void }) {
+  const text = useFormText();
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="group inline-flex cursor-pointer items-center gap-1.5 rounded-lg py-1 text-start text-[14px] font-medium text-ink hover:text-brand"
+    >
+      <span aria-hidden className="text-[16px] leading-none text-brand">+</span>
+      <span className="group-hover:underline">
+        {label} <span className="font-normal text-muted">({text.optional})</span>
+      </span>
+    </button>
+  );
+}
+
+/** Moves focus into a question the person has just chosen to open. */
+function useFocusWhenOpened(justOpened: React.MutableRefObject<boolean>, collapsed: boolean) {
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!collapsed && justOpened.current) {
+      justOpened.current = false;
+      box.current?.querySelector<HTMLElement>("input, textarea, select")?.focus();
+    }
+  }, [collapsed, justOpened]);
+  return box;
+}
+
 function useIds() {
   const id = useId();
   return { control: `${id}-c`, hint: `${id}-h`, error: `${id}-e` };
@@ -162,6 +213,9 @@ export function TextField({
   const { register } = useFormContext();
   const error = useFieldError(name);
   const ids = useIds();
+  const reveal = useReveal(name, required);
+  const box = useFocusWhenOpened(reveal.justOpened, reveal.collapsed);
+  if (reveal.collapsed) return <RevealLink label={label} onOpen={reveal.open} />;
   const common = {
     id: ids.control,
     placeholder,
@@ -173,6 +227,7 @@ export function TextField({
     ...register(name),
   };
   return (
+    <div ref={box}>
     <FieldShell number={number} label={label} hint={hint} required={required} error={error} ids={ids} compact={compact}>
       {multiline ? (
         <Textarea rows={rows} className={rows < 4 ? "min-h-20" : undefined} {...common} />
@@ -180,6 +235,7 @@ export function TextField({
         <Input autoComplete={autoComplete} type={type} inputMode={type === "number" ? "numeric" : undefined} min={type === "number" ? 0 : undefined} {...common} />
       )}
     </FieldShell>
+    </div>
   );
 }
 
@@ -275,11 +331,15 @@ export function ChoiceField({
   const error = useFieldError(name);
   const ids = useIds();
   const [query, setQuery] = useState("");
+  const reveal = useReveal(name, required);
+  const box = useFocusWhenOpened(reveal.justOpened, reveal.collapsed);
   const type = multiple ? "checkbox" : "radio";
   const helper = multiple ? (max ? format(text.maxSelect, { max }) : text.selectAll) : undefined;
   const q = query.trim().toLowerCase();
 
+  if (reveal.collapsed) return <RevealLink label={label} onOpen={reveal.open} />;
   return (
+    <div ref={box}>
     <FieldShell
       group
       number={number}
@@ -367,5 +427,6 @@ export function ChoiceField({
         }}
       />
     </FieldShell>
+    </div>
   );
 }

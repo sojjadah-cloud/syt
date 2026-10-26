@@ -88,8 +88,10 @@ export function PathwayForm({ t, values, pathwayOptions, fieldLabels }: Props) {
                       <TextField compact multiline rows={2} required={false} name={n("eligibility")} label={p.o.eligibility} />
                       <TextField compact multiline rows={2} required={false} name={n("preparation")} label={p.o.preparation} />
                       <TextField compact multiline rows={2} required={false} name={n("equipment")} label={p.o.equipment} />
-                      <ChoiceField compact name={n("priority")} label={p.o.priority} columns={3} options={opts(PRIORITIES, o.priority)} />
                       <TextField compact multiline rows={2} required={false} name={n("notes")} label={p.o.notes} />
+                      <Wide>
+                        <ChoiceField compact name={n("priority")} label={p.o.priority} columns={3} options={opts(PRIORITIES, o.priority)} />
+                      </Wide>
                       <Wide>
                         <AttachmentField name={n("attachments")} t={t} />
                       </Wide>
@@ -134,7 +136,9 @@ export function PathwayForm({ t, values, pathwayOptions, fieldLabels }: Props) {
                     <Wide>
                       <TextField compact multiline rows={2} required={false} name={n("description")} label={`${p.r.description} / ${p.r.benefit}`} />
                     </Wide>
-                    <ChoiceField compact name={n("priority")} label={p.r.priority} columns={3} options={opts(PRIORITIES, o.priority)} />
+                    <Wide>
+                      <ChoiceField compact name={n("priority")} label={p.r.priority} columns={3} options={opts(PRIORITIES, o.priority)} />
+                    </Wide>
                     <TextField compact required={false} name={n("period")} label={p.r.period} />
                   </FieldGrid>
                 );
