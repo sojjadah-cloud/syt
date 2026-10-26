@@ -17,6 +17,7 @@ import { TECHNICAL_FIELDS } from "@/config/survey";
 import type { StaffDictionary } from "@/i18n/staff";
 import {
   CONTRIBUTION_STEPS,
+  contributionBase,
   contributionSubmit,
   emptyProject,
   emptyWorkshop,
@@ -187,11 +188,11 @@ export function ContributionForm({ t, values, fieldLabels }: Props) {
       [
         { label: c.q3, value: labelOf(v.workshopIntent, o.yesPossiblyNot) },
         ...(showWorkshops(v)
-          ? [{ label: c.workshop, value: v.workshops.map((w) => `${w.title || t.common.untitled} — ${labelOf(w.field, o.expertise)}${files(w.attachments.length)}`) }]
+          ? [{ label: c.workshop, value: v.workshops.map((w) => `${w.title || t.common.untitled} — ${labelOf(w.field, o.expertise)}${files(w.attachments?.length ?? 0)}`) }]
           : []),
         { label: c.q4, value: labelOf(v.projectIntent, o.yesPossiblyNot) },
         ...(showProjects(v)
-          ? [{ label: c.project, value: v.projects.map((p) => `${p.title || t.common.untitled} — ${labelOf(p.field, o.expertise)}${files(p.attachments.length)}`) }]
+          ? [{ label: c.project, value: v.projects.map((p) => `${p.title || t.common.untitled} — ${labelOf(p.field, o.expertise)}${files(p.attachments?.length ?? 0)}`) }]
           : []),
         { label: c.q5, value: [labelOf(v.mentorCompetitions, o.mentor), ...(showMentorFields(v) ? labelsOf(v.mentorFields, o.expertise) : [])].filter(Boolean) },
       ],
@@ -215,6 +216,10 @@ export function ContributionForm({ t, values, fieldLabels }: Props) {
       repeaters={["workshops", "projects"]}
       schema={contributionSubmit}
       defaultValues={values}
+      normalize={(v) => {
+        const r = contributionBase.safeParse(v);
+        return r.success ? r.data : null;
+      }}
       renderStep={renderStep}
       review={review}
     />

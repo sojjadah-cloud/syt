@@ -15,7 +15,7 @@ import {
 } from "@/config/staff";
 import { TECHNICAL_FIELDS } from "@/config/survey";
 import type { StaffDictionary } from "@/i18n/staff";
-import { PATHWAY_STEPS, emptyOpportunity, emptyRecommendation, pathwaySubmit, showOpportunities, type PathwayValues } from "@/lib/staff-schema";
+import { PATHWAY_STEPS, emptyOpportunity, emptyRecommendation, pathwayBase, pathwaySubmit, showOpportunities, type PathwayValues } from "@/lib/staff-schema";
 import { AttachmentField } from "./AttachmentField";
 import { FieldGrid, When, Wide, labelOf, labelsOf, opts } from "./form-helpers";
 import { Repeater } from "./Repeater";
@@ -166,7 +166,7 @@ export function PathwayForm({ t, values, pathwayOptions, fieldLabels }: Props) {
               {
                 label: p.opportunities,
                 value: v.opportunities.map(
-                  (x) => `${x.name || t.common.untitled} — ${labelOf(x.type, o.opportunityTypes)} · ${labelOf(x.priority, o.priority)}${x.attachments.length ? ` · ${t.attachments.label}: ${x.attachments.length}` : ""}`,
+                  (x) => `${x.name || t.common.untitled} — ${labelOf(x.type, o.opportunityTypes)} · ${labelOf(x.priority, o.priority)}${x.attachments?.length ? ` · ${t.attachments.label}: ${x.attachments.length}` : ""}`,
                 ),
               },
             ]
@@ -192,6 +192,10 @@ export function PathwayForm({ t, values, pathwayOptions, fieldLabels }: Props) {
       repeaters={["opportunities", "recommendations"]}
       schema={pathwaySubmit}
       defaultValues={values}
+      normalize={(v) => {
+        const r = pathwayBase.safeParse(v);
+        return r.success ? r.data : null;
+      }}
       renderStep={renderStep}
       review={review}
     />

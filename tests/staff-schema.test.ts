@@ -15,6 +15,7 @@ import {
   levelsToDb,
   levelsToForm,
   moduleSubmit,
+  pathwayBase,
   pathwaySubmit,
 } from "@/lib/staff-schema";
 import { STAFF_DICTS } from "@/i18n/staff";
@@ -169,6 +170,24 @@ describe("question counts (shortened forms)", () => {
     expect(Object.keys(emptyModule()).length).toBeLessThanOrEqual(12);
     expect(Object.keys(emptyContribution()).length).toBeLessThanOrEqual(17);
     expect(Object.keys(emptyOpportunity()).length).toBeLessThanOrEqual(18);
+  });
+});
+
+describe("drafts saved by an older version of the form", () => {
+  it("are brought up to the current shape (missing attachments filled, removed questions dropped)", () => {
+    const old = {
+      ...validPathway(),
+      knowsOtherOpportunities: "NO",
+      targetLevels: ["ALL"],
+      opportunities: [{ name: "Old Cup", type: "COMPETITION", priority: "HIGH", preparationDuration: "2 weeks", supportExpected: "Travel" }],
+    };
+    const r = pathwayBase.safeParse(old);
+    expect(r.success).toBe(true);
+    if (!r.success) return;
+    expect(r.data.opportunities[0].attachments).toEqual([]);
+    expect(r.data.opportunities[0].requiredFields).toEqual([]);
+    expect("knowsOtherOpportunities" in r.data).toBe(false);
+    expect("preparationDuration" in r.data.opportunities[0]).toBe(false);
   });
 });
 

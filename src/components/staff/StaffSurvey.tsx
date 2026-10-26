@@ -29,6 +29,8 @@ interface Props<V extends FieldValues> {
   repeaters: string[];
   schema: z.ZodType;
   defaultValues: V;
+  /** Brings a restored draft up to the current form shape (fills new fields, drops removed ones). */
+  normalize?: (values: unknown) => V | null;
   /** Renders the survey's own step (0-based, excluding "Your details"). */
   renderStep: (step: number) => React.ReactNode;
   review: (values: V) => ReviewRow[][];
@@ -110,7 +112,8 @@ export function StaffSurvey<V extends FieldValues>(props: Props<V>) {
     const identity = store.get<Identity>(IDENTITY_KEY);
     if (draft?.values) {
       setHasDraft(true);
-      reset({ ...defaultValues, ...draft.values } as never);
+      const merged = { ...defaultValues, ...draft.values };
+      reset((props.normalize?.(merged) ?? merged) as never);
       setStep(Math.min(draft.step ?? 0, REVIEW));
       setMaxReached(Math.min(draft.maxReached ?? 0, REVIEW));
     } else if (identity) {

@@ -5,7 +5,7 @@ import { ChoiceField, SelectField, TextField } from "@/components/survey/fields"
 import { ACTIVITY_TIMINGS, ASSESSMENT_METHODS, COMPETITION_POTENTIAL, MODULE_ACTIVITY_TYPES, PARTICIPATION, SEMESTERS, YES_POSSIBLY_NOT } from "@/config/staff";
 import { ACADEMIC_LEVELS } from "@/config/survey";
 import type { StaffDictionary } from "@/i18n/staff";
-import { MODULE_STEPS, emptyActivity, emptyOutcome, moduleSubmit, showActivities, type ModuleValues } from "@/lib/staff-schema";
+import { MODULE_STEPS, emptyActivity, emptyOutcome, moduleBase, moduleSubmit, showActivities, type ModuleValues } from "@/lib/staff-schema";
 import { AttachmentField } from "./AttachmentField";
 import { FieldGrid, When, Wide, labelOf, labelsOf, opts } from "./form-helpers";
 import { Repeater } from "./Repeater";
@@ -142,7 +142,7 @@ export function ModuleForm({ t, values }: { t: StaffDictionary; values: ModuleVa
         { label: m.q2, value: v.moduleCode },
         { label: m.q3, value: [labelOf(v.level, o.levels), labelOf(v.semester, o.semesters)].filter(Boolean).join(" · ") },
         { label: m.q4, value: v.overview },
-        { label: t.attachments.moduleLabel, value: v.attachments.map((f) => f.name) },
+        { label: t.attachments.moduleLabel, value: (v.attachments ?? []).map((f) => f.name) },
       ],
       [
         { label: m.q5, value: v.outcomes.map((x) => `${x.identifier} — ${x.description}`) },
@@ -158,7 +158,7 @@ export function ModuleForm({ t, values }: { t: StaffDictionary; values: ModuleVa
                 a.outcomeKeys.length ? a.outcomeKeys.map((k) => outcomeLabel.get(k) ?? "").filter(Boolean).join(", ") : "",
                 labelsOf(a.assessmentMethods, o.assessment).join(", "),
                 [labelOf(a.timing, o.timing), labelOf(a.competitionPotential, o.competitionPotential)].filter(Boolean).join(" · "),
-                ...files(a.attachments.length),
+                ...files(a.attachments?.length ?? 0),
               ].filter(Boolean),
             }))
           : []),
@@ -177,6 +177,10 @@ export function ModuleForm({ t, values }: { t: StaffDictionary; values: ModuleVa
       repeaters={["outcomes", "activities"]}
       schema={moduleSubmit}
       defaultValues={values}
+      normalize={(v) => {
+        const r = moduleBase.safeParse(v);
+        return r.success ? r.data : null;
+      }}
       renderStep={renderStep}
       review={review}
     />
